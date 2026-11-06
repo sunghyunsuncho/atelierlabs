@@ -1,0 +1,118 @@
+/* 내용이 짧아도 푸터가 화면 아래에 붙도록 */
+body:has(> .public-main) { min-height: 100vh; display: flex; flex-direction: column; }
+body:has(> .public-main) > .public-main { flex: 1 0 auto; width: 100%; }
+.public-main { max-width: 1200px; margin: 0 auto; padding: clamp(52px, 8vw, 100px) var(--gutter) 120px; }
+.public-main h1 { font-size: clamp(38px, 5vw, 64px); line-height: 1.08; margin: 0 0 12px; letter-spacing: -.065em; }
+.intro { color: var(--muted); margin: 0 0 42px; font-size: 17px; }
+.tabs { display: flex; gap: 8px; margin: 0 0 32px; flex-wrap: wrap; }
+.tabs a { padding: 8px 14px; border: 1px solid var(--line); font-size: 14px; font-weight: 650; text-decoration: none; }
+.tabs a.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.card { display: block; min-width: 0; overflow: hidden; background: var(--paper); text-decoration: none; transition: background .18s ease; }
+.card:hover { transform: translateY(-3px); }
+.card:hover { background: var(--surface); }
+.thumb { display: block; width: 100%; aspect-ratio: 1.45; background: var(--surface); object-fit: cover; }
+.body { padding: 20px; }
+.meta { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.card h2 { font-size: 19px; line-height: 1.42; margin: 0; letter-spacing: -.04em; }
+.card p { color: var(--muted); font-size: 14px; line-height: 1.65; margin: 12px 0 0; }
+.detail { max-width: 760px; }
+.detail h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.22; margin: 16px 0 20px; }
+.detail-image { width: 100%; max-height: 550px; object-fit: cover; border-radius: 12px; margin: 20px 0 28px; }
+.detail-text { white-space: pre-wrap; font-size: 17px; line-height: 1.9; }
+.back { color: var(--blue); font-size: 14px; font-weight: 700; }
+.back:hover, .card:hover h2 { color: var(--coral); }
+.loading, .error { color: var(--muted); padding: 48px 0; }
+.listing-highlight { margin: 0 0 44px; padding: 26px; border: 1px solid var(--line); background: var(--surface); }
+.listing-highlight h2 { font-size: clamp(24px, 3vw, 34px); margin: 0 0 18px; letter-spacing: -.05em; }
+.highlight-label { color: var(--blue); font-size: 12px; font-weight: 700; letter-spacing: .1em; margin: 0 0 8px; text-transform: uppercase; }
+.mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mini-card { display: block; padding: 15px; border: 1px solid var(--line); background: var(--paper); text-decoration: none; }
+.mini-card:hover { background: #fff4eb; }.mini-card strong { display:block; line-height:1.45; }.badge { display:inline-block; margin:0 0 7px; padding:2px 6px; background:var(--coral); color:white; font-size:12px; font-weight:700; }
+.map-canvas { height: 400px; background: #e9e7e2; border: 1px solid var(--line); }.map-panel { margin-top: 1px; background: var(--paper); }.map-panel p { margin:0; padding:14px; color:var(--muted); }.map-items { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:var(--line); }.map-museum { padding:15px; background:var(--paper); }.map-museum h3 { margin:0 0 8px; font-size:16px; }.map-museum ul { padding:0; margin:0; list-style:none; }.map-museum li { padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
+.quiz { max-width:680px; }.quiz-option { display:block; width:100%; text-align:left; padding:17px; margin:10px 0; border:1px solid var(--line); background:var(--paper); font:inherit; cursor:pointer; }.quiz-option:hover { border-color:var(--coral); background:var(--surface); }.quiz-progress { color:var(--muted); font-size:14px; }.quiz-result { padding:28px; background:var(--surface); border:1px solid var(--line); }.quiz-result h2 { font-size:30px; margin:0 0 8px; }.quiz-result p { white-space:pre-line; }.quiz-result ul { padding-left:20px; }
+.taste-intro { padding: clamp(12px, 2vw, 24px) 0; }.taste-intro h1 { margin-bottom: 10px; }.taste-question { margin: 0 0 25px; color: var(--blue); font-size: clamp(18px, 2.2vw, 22px); font-weight: 700; }.taste-guide { margin: 30px 0 22px; padding: 0 0 0 18px; border-left: 3px solid var(--coral); }.taste-guide h2, .taste-reference h2 { margin: 0 0 12px; font-size: 18px; }.taste-guide ul { margin: 0; padding-left: 20px; color: var(--muted); }.taste-guide li + li { margin-top: 8px; }.quiz-note { color: var(--muted); font-size: 14px; }.start-taste-button { width: 100%; margin-top: 16px; padding: 17px 20px; border: 0; background: var(--blue); color: white; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }.start-taste-button:hover { background: var(--coral); }.start-taste-button:disabled { opacity: .6; cursor: wait; }.start-taste-button span { margin-left: 8px; }.taste-reference { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.7; }.taste-reference p { margin: 0 0 12px; }.taste-reference ul { margin: 0; padding-left: 18px; }.taste-reference li + li { margin-top: 7px; }
+@media (max-width: 700px) { .grid, .mini-grid, .map-items { grid-template-columns: 1fr; } .public-main { padding-top: 42px; } .listing-highlight { padding:18px; } }
+/* 전시 찾기 나라 탭 — 국기 이모지 + 나라 이름 */
+.country-tabs a { display: inline-flex; align-items: center; gap: 6px; }
+.country-tabs .flag { font-size: 16px; line-height: 1; }
+/* 7일 안에 끝나는·시작한 전시 카드의 대표 이미지 */
+.mini-thumb { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; margin: 0 0 12px; background: #e9e7e2; }
+/* 목록 전체 — 검색 + 페이지 나누기 */
+.listing-all { scroll-margin-top: 88px; }
+.listing-all-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin: 0 0 18px; }
+.listing-all-head .listing-all-title { margin: 0; }
+.listing-count { color: var(--muted); font-size: .55em; font-weight: 600; letter-spacing: 0; }
+.listing-search { flex: 0 1 320px; min-width: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }
+.listing-search:focus { outline: 2px solid var(--blue); outline-offset: -1px; border-color: var(--blue); }
+/* 마지막 줄이 덜 차도 빈 칸이 회색으로 보이지 않게 — 칸 사이 선은 카드 그림자로 긋는다 */
+.grid { background: none; }
+.grid > .card { box-shadow: 0 0 0 1px var(--line); }
+.grid > .error { grid-column: 1 / -1; margin: 0; padding: 48px 0; text-align: center; }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 28px 0 0; }
+.pager:empty { display: none; }
+.pager button { min-width: 38px; height: 38px; padding: 0 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.pager button:hover:not(:disabled) { border-color: var(--ink); }
+.pager button[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.pager button:disabled { color: var(--muted); opacity: .45; cursor: default; }
+.pager-gap { padding: 0 2px; color: var(--muted); }
+@media (max-width: 700px) { .listing-search { flex-basis: 100%; } }
+/* 연간 캘린더 — 타임라인 막대 */
+.calendar { --tl-label: 240px; --tl-ongoing: var(--coral); --tl-upcoming: var(--blue); --tl-ended: #c9c4ba; }
+.cal-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 0 20px; }
+.cal-head h2 { margin: 0; }
+.cal-controls { display: flex; align-items: center; gap: 10px; }
+.cal-controls strong { min-width: 64px; text-align: center; font-size: 17px; }
+.cal-controls button { width: 36px; height: 36px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 18px; cursor: pointer; }
+.cal-controls button:hover:not(:disabled) { border-color: var(--ink); }
+.cal-controls button:disabled { color: var(--muted); opacity: .4; cursor: default; }
+.tl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tl { min-width: 860px; background: var(--paper); border: 1px solid var(--line); }
+.tl-months, .tl-row { display: grid; grid-template-columns: var(--tl-label) 1fr; }
+.tl-lane { position: relative; display: block; min-width: 0; }
+.tl-months { border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--muted); }
+.tl-months .tl-lane { height: 38px; }
+.tl-months .tl-lane span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; border-left: 1px solid var(--line); }
+.tl-months .tl-lane span:first-child { border-left: 0; }
+.tl-months .tl-lane span.now { color: var(--paper); background: var(--ink); }
+.tl-corner { position: sticky; left: 0; z-index: 2; display: flex; align-items: center; padding: 0 16px; background: var(--paper); border-right: 1px solid var(--line); font-weight: 600; }
+.tl-body { position: relative; }
+.tl-grid { position: absolute; top: 0; bottom: 0; left: var(--tl-label); right: 0; pointer-events: none; }
+.tl-grid i { position: absolute; top: 0; bottom: 0; border-left: 1px solid rgba(21, 21, 21, .07); }
+.tl-today { position: absolute; top: 0; bottom: 0; z-index: 1; border-left: 2px solid var(--coral); }
+.tl-today em { position: absolute; top: 4px; left: 4px; padding: 1px 5px; background: var(--coral); color: #fff; font-size: 10.5px; font-style: normal; font-weight: 700; white-space: nowrap; }
+.tl-row { position: relative; min-height: 56px; border-top: 1px solid rgba(21, 21, 21, .07); color: var(--ink); text-decoration: none; }
+.tl-row:first-of-type { border-top: 0; }
+.tl-row:hover { background: #fbfaf8; }
+.tl-row:hover .tl-dates { background: #fbfaf8; }
+.tl-label { position: sticky; left: 0; z-index: 2; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 8px 16px; background: var(--paper); border-right: 1px solid var(--line); }
+.tl-row:hover .tl-label { background: #fbfaf8; }
+.tl-label strong { overflow: hidden; font-size: 14px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.tl-label small { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.tl-row:hover .tl-label strong { color: var(--coral); }
+.tl-bar { position: absolute; top: 50%; min-width: 6px; height: 14px; margin-top: -7px; border-radius: 7px; background: var(--tl-upcoming); }
+.tl-bar.cut-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.tl-bar.cut-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.status-ongoing .tl-bar { background: var(--tl-ongoing); }
+.status-ended .tl-bar { background: var(--tl-ended); }
+.status-ended .tl-label strong { color: var(--muted); font-weight: 600; }
+.tl-dates { position: absolute; top: 50%; left: calc(100% + 8px); transform: translateY(-50%); z-index: 1; padding: 0 3px; background: var(--paper); color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tl-dates.before { left: auto; right: calc(100% + 8px); }
+.status-ongoing .tl-dates { color: var(--coral); }
+.tl-empty { margin: 0; padding: 40px 16px 40px calc(var(--tl-label) + 16px); color: var(--muted); }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.tl-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tl-legend i { width: 18px; height: 8px; border-radius: 4px; background: var(--tl-upcoming); }
+.tl-legend .status-ongoing i { background: var(--tl-ongoing); }
+.tl-legend .status-ended i { background: var(--tl-ended); }
+@media (max-width: 700px) { .calendar { --tl-label: 150px; } .tl { min-width: 760px; } .tl-label { padding: 8px 12px; } .tl-corner { padding: 0 12px; } }
+/* 나라 탭의 행사 수 */
+.tab-count { margin-left: 2px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.tabs a.active .tab-count { color: rgba(255, 255, 255, .7); }
+/* 행사 목록(나라 필터 아래) — 진행 중·개막 예정·일정 미정 섹션 */
+#event-list > section { margin: 0 0 64px; }
+#event-list > section > h2 { margin: 40px 0 20px; }
+/* 나라 탭 — 상위 5개 밖은 "더 보기"로 편다 */
+.country-tabs:not(.expanded) .extra-country { display: none; }
+.more-countries { padding: 8px 14px; border: 1px dashed var(--line); background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.more-countries:hover { border-color: var(--ink); }

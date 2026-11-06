@@ -1,6 +1,8 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+import app.main as main
 from app.main import app
 
 client = TestClient(app)
@@ -88,6 +90,16 @@ def test_language_redirects(path, location):
     assert res.headers["location"] == location
 
 
+@pytest.mark.parametrize("path", ["/privacy", "/terms"])
+def test_policy_hubs_ko_en_only(path):
+    """개인정보 처리방침·이용약관 안내는 한국어·영어만 두고, 일본어는 영어판으로 보낸다."""
+    assert '<html lang="ko">' in get(path, "atelierlabs.co.kr").text
+    assert '<html lang="en">' in get(f"/en{path}", "atelierlabs.co.kr").text
+    res = get(f"/ja{path}", "atelierlabs.co.kr")
+    assert res.status_code == 301
+    assert res.headers["location"] == f"/en{path}"
+
+
 def test_localized_404():
     res = get("/ja/nope", "atelierlabs.co.kr")
     assert res.status_code == 404 and '<html lang="ja">' in res.text
@@ -143,9 +155,126 @@ def test_healthz():
     assert get("/healthz", "atelierlabs.co.kr").json() == {"status": "ok"}
 
 
+def test_vernissage_public_api_proxy(monkeypatch):
+    class StubClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def get(self, url, headers):
+            assert str(url) == "http://vernissage-api:8000/public-web/home?lang=ko"
+            assert headers["X-Public-Web-Token"] == "shared-token"
+            return httpx.Response(200, json={"docent_notes": []}, headers={"Cache-Control": "max-age=60"})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "VERNISSAGE_PUBLIC_WEB_API_TOKEN", "shared-token")
+    monkeypatch.setattr(main.httpx, "AsyncClient", StubClient)
+    res = get("/api/vernissage/public-web/home?lang=ko", "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert res.json() == {"docent_notes": []}
+    assert res.headers["cache-control"] == "max-age=60"
+    assert res.headers["vary"] == "X-App-Language"
+
+
+def test_vernissage_public_api_proxy_is_not_available_on_other_sites():
+    assert get("/api/vernissage/public-web/home", "atelierlabs.co.kr").status_code == 404
+
+
+@pytest.mark.parametrize("api_path", ["../private", "./home", "/home", "home//latest", ""])
+def test_vernissage_public_api_path_cannot_escape_public_prefix(api_path):
+    """URL 정규화로 /public-web/ 밖의 내부 API를 프록시하면 안 된다."""
+    assert not main._is_safe_api_path(api_path)
+
+
+def test_vernissage_public_api_path_accepts_nested_public_resource():
+    assert main._is_safe_api_path("exhibitions/22054")
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/docent/notes", "/docent/notes/35", "/exhibitions", "/exhibitions/22054", "/art-events", "/art-taste-test"],
+)
+def test_vernissage_public_web_routes_use_client_shell(path):
+    res = get(path, "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert 'id="public-web-app"' in res.text
+
+
+@pytest.mark.parametrize("lang", ["en", "ja"])
+@pytest.mark.parametrize(
+    "path",
+    ["/docent/notes", "/docent/notes/35", "/exhibitions", "/exhibitions/22054", "/art-events/7", "/art-taste-test"],
+)
+def test_vernissage_public_web_routes_have_language_shells(lang, path):
+    res = get(f"/{lang}{path}", "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert 'id="public-web-app"' in res.text
+    assert f'<html lang="{lang}">' in res.text
+    assert f'href="/{lang}/exhibitions"' in res.text
+
+
+@pytest.mark.parametrize("path", ["/en/unknown", "/fr/exhibitions", "/en/exhibitionsX"])
+def test_vernissage_unknown_paths_are_not_shells(path):
+    assert get(path, "vernissage.localhost:8000").status_code == 404
+
+
+@pytest.mark.parametrize("sent, forwarded", [("ja", "ja"), ("EN", "en"), ("fr", None), (None, None)])
+def test_vernissage_public_api_proxy_forwards_language(monkeypatch, sent, forwarded):
+    seen = {}
+
+    class StubClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def get(self, url, headers):
+            seen.update(headers)
+            return httpx.Response(200, json={}, headers={"Vary": "X-App-Language"})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main.httpx, "AsyncClient", StubClient)
+    headers = {"host": "vernissage.localhost:8000", **({"X-App-Language": sent} if sent else {})}
+    res = client.get("/api/vernissage/public-web/exhibitions", headers=headers)
+    assert res.status_code == 200
+    assert seen.get("X-App-Language") == forwarded
+    assert res.headers["vary"] == "X-App-Language"
+
+
+@pytest.mark.parametrize("path", ["/en/", "/ja/"])
+def test_vernissage_home_links_to_localized_public_pages(path):
+    res = get(path, "vernissage.localhost:8000")
+    lang = path.strip("/")
+    for page in ("docent/notes", "exhibitions", "art-events", "art-taste-test"):
+        assert f'href="/{lang}/{page}"' in res.text
+
+
 def test_company_pages():
     res = get("/support", "atelierlabs.co.kr")
     assert res.status_code == 200 and "고객지원" in res.text
     res = get("/does-not-exist", "atelierlabs.co.kr")
     assert res.status_code == 404 and "페이지를 찾을 수 없어요" in res.text
     assert get("/assets/site.css", "atelierlabs.co.kr").headers["content-type"].startswith("text/css")
+
+
+def test_localhost_rewrites_cross_site_links():
+    """로컬(*.localhost)에서는 운영 도메인 링크가 같은 포트의 로컬 서브도메인으로 바뀐다."""
+    res = get("/", "localhost:13000")
+    assert 'href="http://keepsake.localhost:13000/"' in res.text
+    assert "atelierlabs.co.kr/" not in res.text.replace("atelierlabs.kr@gmail.com", "")
+    res = get("/privacy", "localhost:13000")
+    assert 'href="http://vernissage.localhost:13000/legal/privacy-policy"' in res.text
+    res = get("/", "keepsake.localhost:13000")
+    assert 'href="http://localhost:13000/"' in res.text
+    # 운영 도메인으로 열면 그대로 둔다.
+    res = get("/privacy", "atelierlabs.co.kr")
+    assert 'href="https://vernissage.atelierlabs.co.kr/legal/privacy-policy"' in res.text
