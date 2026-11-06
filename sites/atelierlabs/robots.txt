@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://atelierlabs.co.kr/sitemap.xml

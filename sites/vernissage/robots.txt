@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vernissage.atelierlabs.co.kr/sitemap.xml

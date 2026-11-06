@@ -1,0 +1,23 @@
+name: atelierlabs
+
+# 로컬 개발용. 운영(Railway)은 Dockerfile만 쓴다.
+# 포트는 compose.dev.env 참고 (./start.sh 가 --env-file 로 넘겨준다).
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT:-13000}:8000"
+    volumes:
+      # 이미지 안의 .venv 를 가리지 않도록 코드·정적 파일만 마운트한다.
+      - ./app:/app/app
+      - ./sites:/app/sites
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

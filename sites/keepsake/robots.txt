@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://keepsake.atelierlabs.co.kr/sitemap.xml
