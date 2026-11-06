@@ -8,7 +8,7 @@ Railway 서비스 하나가 모든 도메인을 받고, 요청의 `Host` 헤더�
 | `atelierlabs.co.kr` | 회사 홈(`/`: 소개·앱·원칙), 고객지원(`/support`) | [sites/atelierlabs/](sites/atelierlabs/) |
 | `www.atelierlabs.co.kr` | `atelierlabs.co.kr`로 301 | — |
 | `vernissage.atelierlabs.co.kr` | Vernissage 소개, 공개 도슨트·전시·아트 이벤트·예술 취향 테스트, 약관 안내 | [sites/vernissage/](sites/vernissage/) |
-| `keepsake.atelierlabs.co.kr` | Keepsake 소개, 출시 소식·앱 안내(이 사이트에서 관리) | [sites/keepsake/](sites/keepsake/) |
+| `keepsake.atelierlabs.co.kr` | Keepsake 소개, 출시 소식·앱 안내, 약관 안내 | [sites/keepsake/](sites/keepsake/) |
 
 모든 페이지는 한국어(`/…`)·영어(`/en/…`)·일본어(`/ja/…`)로 제공한다. 아래 [다국어](#다국어) 참고.
 
@@ -19,7 +19,7 @@ app/main.py      FastAPI 서버: Host로 사이트 선택, URL을 파일로 매�
 sites/<site>/    사이트별 정적 파일 (HTML, assets/, robots.txt, sitemap.xml)
   en/, ja/       영어·일본어 페이지 (한국어 페이지와 같은 경로)
                  스타일은 페이지마다 넣지 않고 공용 CSS를 쓴다:
-                 atelierlabs/assets/site.css, vernissage/assets/home.css(랜딩), vernissage/assets/public.css(공개 콘텐츠), vernissage/assets/legal.css(약관)
+                 atelierlabs/assets/site.css, vernissage/assets/home.css(랜딩), vernissage/assets/public.css(공개 콘텐츠), vernissage/assets/legal.css·keepsake/assets/legal.css(약관)
 brand/           사이트 로고·폰트 원본 (서비스되지 않음)
 scripts/         brand/ 원본으로 웹용 이미지를 만드는 스크립트
 tests/           라우팅 테스트
@@ -37,8 +37,8 @@ uv run --with pillow python scripts/build_brand_assets.py
 URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 
 - `/` → `index.html`
-- `/legal/privacy-policy` → `legal/privacy-policy.html` (`.html`은 생략)
-- `/en/legal/privacy-policy` → `en/legal/privacy-policy.html`
+- 일반 URL은 확장자 없는 정적 HTML 파일로 매핑된다. 단, 앱의 이용약관·개인정보 처리방침 URL은
+  해당 앱 백엔드에서 프록시한다. 아래 [이용약관·개인정보 처리방침](#이용약관개인정보-처리방침)을 참고한다.
 - `/favicon.ico`, `/apple-touch-icon.png` → `assets/favicon.png`, `assets/apple-touch-icon.png`
 - 없는 경로 → `<lang>/404.html`, 없으면 `404.html`, 그것도 없으면 일반 텍스트 404
 
@@ -47,10 +47,11 @@ URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 - 한국어는 루트, 영어·일본어는 `/en/`, `/ja/` 아래 **같은 경로**에 둔다. 페이지를 추가하면 세 언어를 함께 만든다.
 - 각 페이지에는 `canonical`(자기 주소), `hreflang` ko/en/ja + `x-default`(한국어), 헤더의 KO·EN·JA 전환, 푸터의 언어 링크를 넣는다.
 - 사이트맵에 언어별 주소를 모두 싣는다.
-- **약관·개인정보 처리방침·계정 삭제 안내는 한국어·영어만 있다.** 일본어 페이지는 영어판(`/en/legal/…`)으로 링크하고
-  "（英語）"라고 표시한다. `/ja/legal/…`로 들어오면 서버가 `/en/legal/…`로 301 한다. Atelier Labs의
-  개인정보 처리방침·이용약관 안내(`/privacy`, `/terms`)도 한국어·영어만 제공하며 `/ja/privacy`, `/ja/terms`는 영어로 301 한다.
-- 영어판 약관은 "한국어판이 우선한다"는 문구를 둔다. 한국어판을 고치면 영어판도 함께 고친다.
+- **Vernissage·Keepsake의 약관·개인정보 처리방침은 한국어·영어만 있다** (Vernissage는 계정 삭제 안내 포함). 일본어 페이지는
+  영어판(`/en/legal/…`)으로 링크하고 "（英語）"라고 표시한다. `/ja/legal/…`로 들어오면 서버가 `/en/legal/…`로 301 한다.
+  문서 원문은 각 앱 백엔드가 `/public-web/legal/{ko|en}/{문서}`로 서빙하고 이 서버는 프록시만 한다. Atelier Labs의 개인정보 처리방침·이용약관
+  안내(`/privacy`, `/terms`)도 한국어·영어만 제공하며 `/ja/privacy`, `/ja/terms`는 영어로 301 한다.
+- Vernissage·Keepsake 영어판 약관은 "한국어판이 우선한다"는 문구를 둔다. 한국어판을 고치면 영어판도 함께 고친다.
 - Vernissage 공개 콘텐츠 화면도 루트·`/en/`·`/ja/` 경로로 같은 기능을 제공하고, 데이터 언어는 요청 언어 헤더로 정한다.
 - 서버의 리다이렉트: `/jp/…` → `/ja/…`, 옛 영문 약관 주소 `/legal/en/…` → `/en/legal/…`
 
@@ -85,6 +86,7 @@ Compose 프로젝트명도 `atelierlabs`로 고정되어 컨테이너·네트워
 |---|---|
 | 웹 개발 서버 (사이트 서버) | 13000 |
 | Vernissage API (별도 `vernissage` 리포) | 18000 |
+| Keepsake API (별도 `keepsake` 리포) | 18020 |
 | API (atelierlabs용 예약) | 18010 |
 | Postgres 호스트 (예약, 미사용) | 15433 |
 | Redis 호스트 (예약, 미사용) | 16380 |
@@ -133,17 +135,17 @@ vernissage 웹페이지는 `www.vernissage.kr`에서 `vernissage.atelierlabs.co.
 vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는 API만 남기고, 화면은 모두 이 리포로 온다.
 약관·개인정보 처리방침의 정식 주소도 `vernissage.atelierlabs.co.kr/legal/…`이다.
 
-`sites/vernissage/`는 vernissage 리포 `backend/home/`, `backend/legal/`에서 옮겨왔다(2026-11-06).
+`sites/vernissage/`는 vernissage 리포 `backend/home/`에서 옮겨왔다(2026-11-06).
 
-- 자산 경로 `/home/assets/…` → `/assets/…`, 영문 약관 `legal/*.en.html` → `en/legal/*.html`
-- vernissage 리포에서는 `backend/home/`, `backend/legal/`을 지우는 중이다. **약관 원본은 이제 이 리포다.**
+- 자산 경로 `/home/assets/…` → `/assets/…`
+- 화면 shell은 이 리포가 관리하지만, 이용약관·개인정보 처리방침의 원본은 Vernissage 백엔드가 관리하고 이 서버가 프록시한다.
 - `canonical`·`hreflang`·`og:*`·JSON-LD 주소는 `https://vernissage.atelierlabs.co.kr`
 - 공개 도슨트·전시·비엔날레·아트페어·예술취향테스트 화면은 이 리포의 정적 shell과 Vernissage 공개 API로 제공한다.
   소개 페이지는 `https://www.vernissage.kr/about`을 계속 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
   AdSense 자리표시는 두지 않는다.
 - 개인정보 처리방침 제11조에서 웹사이트 AdSense·쿠키 고지를 뺐다(웹 광고는 게재하지 않음). 앱의 AdMob 고지는 남아 있다.
 
-### Vernissage API 연결
+### 앱 API 연결
 
 웹 페이지에서 Vernissage 데이터가 필요하면 백엔드를 브라우저에서 직접 호출하지 말고,
 같은 origin의 아래 주소를 호출한다.
@@ -194,3 +196,18 @@ http://${{vernissage-api.RAILWAY_PRIVATE_DOMAIN}}:${{vernissage-api.PORT}}
 ```
 
 private network는 `http`를 사용하며, 같은 프로젝트·환경 안에서만 해석된다.
+
+### 이용약관·개인정보 처리방침
+
+법률 문서의 원본은 홈페이지 리포가 아니라 각 앱 백엔드에 둔다. 홈페이지는 기존 공개 URL을 유지한 채
+해당 문서를 프록시하므로, 앱 백엔드에서 문서를 배포하면 홈페이지를 다시 배포하지 않아도 최신 원문이
+반영된다. 문서와 오류 응답은 캐시하지 않는다. API는 공개 웹 공유 토큰으로 보호하며, 운영 환경에서는
+아래 두 쌍을 같은 무작위 값으로 설정한다.
+
+| 홈페이지 환경변수 | 앱 백엔드 환경변수 |
+|---|---|
+| `VERNISSAGE_API_BASE_URL`, `VERNISSAGE_PUBLIC_WEB_API_TOKEN` | `PUBLIC_WEB_API_TOKEN` |
+| `KEEPSAKE_API_BASE_URL`, `KEEPSAKE_PUBLIC_WEB_API_TOKEN` | `PUBLIC_WEB_API_TOKEN` |
+
+Keepsake 로컬 API 기본 포트는 `18020`이다. Keepsake도 Vernissage와 같이 한국어·영어 법률 문서를
+각각 제공하며, 일본어 홈페이지에서는 영어 문서를 안내한다.

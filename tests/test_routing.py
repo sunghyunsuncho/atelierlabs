@@ -50,10 +50,29 @@ def test_unknown_subdomain_404():
         "/en/legal/account-deletion",
     ],
 )
-def test_vernissage_legal_pages(path):
+def test_vernissage_legal_pages(monkeypatch, path):
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "")
     res = get(path, "vernissage.atelierlabs.co.kr")
-    assert res.status_code == 200
-    assert res.headers["content-type"].startswith("text/html")
+    # 문서 원본은 별도 Vernissage 백엔드가 소유한다. 기본 테스트 환경에는 그
+    # 백엔드가 없으므로 홈페이지가 올바르게 unavailable 상태를 돌려주는지만 본다.
+    assert res.status_code == (503 if path.endswith(("terms-of-service", "privacy-policy")) else 200)
+
+
+@pytest.mark.parametrize(
+    ("host", "path"),
+    [
+        ("vernissage.localhost:8000", "/legal/terms-of-service"),
+        ("keepsake.localhost:8000", "/legal/privacy-policy"),
+    ],
+)
+def test_unconfigured_legal_document_apis_are_not_cached(monkeypatch, host, path):
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "")
+    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "")
+
+    res = get(path, host)
+
+    assert res.status_code == 503
+    assert res.headers["cache-control"] == "no-store"
 
 
 @pytest.mark.parametrize(
@@ -128,7 +147,18 @@ def test_internal_links_resolve():
                 elif not href.startswith("/"):
                     continue
                 res = get(href.split("?")[0], target_host)
-                if res.status_code not in (200, 301):
+                is_unconfigured_legal_document = (
+                    res.status_code == 503
+                    and target_host in ("vernissage.atelierlabs.co.kr", "keepsake.atelierlabs.co.kr")
+                    and href.split("?", 1)[0]
+                    in (
+                        "/legal/terms-of-service",
+                        "/legal/privacy-policy",
+                        "/en/legal/terms-of-service",
+                        "/en/legal/privacy-policy",
+                    )
+                )
+                if res.status_code not in (200, 301) and not is_unconfigured_legal_document:
                     broken.append(f"{Path(html).relative_to(SITES_DIR)} -> {target_host}{href} ({res.status_code})")
     assert not broken, "\n".join(broken)
 
@@ -183,6 +213,86 @@ def test_vernissage_public_api_proxy(monkeypatch):
 
 def test_vernissage_public_api_proxy_is_not_available_on_other_sites():
     assert get("/api/vernissage/public-web/home", "atelierlabs.co.kr").status_code == 404
+
+
+def test_legal_documents_are_proxied_from_the_owning_backend(monkeypatch):
+    seen = []
+
+    class StubClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def get(self, url, headers):
+            seen.append((str(url), headers))
+            return httpx.Response(200, text="<h1>Current legal document</h1>", headers={"Content-Type": "text/html"})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "VERNISSAGE_PUBLIC_WEB_API_TOKEN", "vern-token")
+    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "http://keepsake-api:8010")
+    monkeypatch.setattr(main, "KEEPSAKE_PUBLIC_WEB_API_TOKEN", "keep-token")
+    monkeypatch.setattr(main.httpx, "AsyncClient", StubClient)
+
+    vernissage = get("/en/legal/privacy-policy", "vernissage.localhost:8000")
+    keepsake = get("/legal/terms-of-service", "keepsake.localhost:8000")
+    keepsake_en = get("/en/legal/privacy-policy", "keepsake.localhost:8000")
+
+    assert vernissage.status_code == keepsake.status_code == keepsake_en.status_code == 200
+    assert (
+        vernissage.headers["cache-control"]
+        == keepsake.headers["cache-control"]
+        == keepsake_en.headers["cache-control"]
+        == "no-store"
+    )
+    assert (
+        vernissage.headers["content-type"]
+        == keepsake.headers["content-type"]
+        == keepsake_en.headers["content-type"]
+        == "text/html"
+    )
+    assert vernissage.text == keepsake.text == keepsake_en.text == "<h1>Current legal document</h1>"
+    assert seen == [
+        (
+            "http://vernissage-api:8000/public-web/legal/en/privacy-policy",
+            {"Accept": "text/html", "X-Public-Web-Token": "vern-token"},
+        ),
+        (
+            "http://keepsake-api:8010/public-web/legal/ko/terms-of-service",
+            {"Accept": "text/html", "X-Public-Web-Token": "keep-token"},
+        ),
+        (
+            "http://keepsake-api:8010/public-web/legal/en/privacy-policy",
+            {"Accept": "text/html", "X-Public-Web-Token": "keep-token"},
+        ),
+    ]
+
+
+def test_unavailable_legal_document_api_is_not_cached(monkeypatch):
+    class UnavailableClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def get(self, url, headers):
+            raise httpx.ConnectError("backend is unavailable")
+
+    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "http://keepsake-api:8010")
+    monkeypatch.setattr(main.httpx, "AsyncClient", UnavailableClient)
+
+    res = get("/legal/privacy-policy", "keepsake.localhost:8000")
+
+    assert res.status_code == 502
+    assert res.headers["cache-control"] == "no-store"
 
 
 @pytest.mark.parametrize("api_path", ["../private", "./home", "/home", "home//latest", ""])

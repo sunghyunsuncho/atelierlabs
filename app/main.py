@@ -13,8 +13,8 @@ http://vernissage.localhost:13000 처럼 열면 된다. 그 외 Host(localhost, 
 
 URL -> 파일 규칙 (sites/<site>/ 기준):
     /                     -> index.html
-    /legal/privacy-policy -> legal/privacy-policy.html
-    /legal/en/            -> legal/en/index.html
+    일반 경로              -> 확장자 없는 정적 HTML 파일
+    /legal/...            -> 앱 백엔드가 소유한 법률 문서 프록시
     /assets/icon.png      -> assets/icon.png
 
 언어: 한국어는 루트, 영어·일본어는 /en/, /ja/ 아래 같은 경로 (예: /en/support -> en/support.html).
@@ -40,6 +40,8 @@ SITES_DIR = Path(os.environ.get("SITES_DIR", Path(__file__).resolve().parent.par
 # 주소나 PUBLIC_WEB_API_TOKEN을 노출하지 않는다.
 VERNISSAGE_API_BASE_URL = os.environ.get("VERNISSAGE_API_BASE_URL", "").rstrip("/")
 VERNISSAGE_PUBLIC_WEB_API_TOKEN = os.environ.get("VERNISSAGE_PUBLIC_WEB_API_TOKEN", "")
+KEEPSAKE_API_BASE_URL = os.environ.get("KEEPSAKE_API_BASE_URL", "").rstrip("/")
+KEEPSAKE_PUBLIC_WEB_API_TOKEN = os.environ.get("KEEPSAKE_PUBLIC_WEB_API_TOKEN", "")
 
 # 서브도메인 이름 -> sites/ 아래 디렉터리. 루트 도메인은 "" 키.
 SITES: dict[str, str] = {
@@ -69,10 +71,10 @@ ASSET_CACHE = "public, max-age=86400"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 목록 화면은 여러 공개 API를 연속 호출할 수 있다. 요청마다 연결을 새로 열지 않고
-    # 앱 수명 동안 하나의 connection pool을 재사용한다.
+    # 공개 API·법률 문서는 요청마다 연결을 새로 열지 않고 앱 수명 동안 하나의
+    # connection pool을 재사용한다.
     async with httpx.AsyncClient(timeout=10.0) as client:
-        app.state.vernissage_http_client = client
+        app.state.upstream_http_client = client
         yield
 
 
@@ -184,21 +186,73 @@ def _is_safe_api_path(api_path: str) -> bool:
     return bool(api_path) and all(segment not in ("", ".", "..") for segment in api_path.split("/"))
 
 
-async def _vernissage_upstream_get(request: Request, url: httpx.URL, headers: dict[str, str]) -> httpx.Response:
+async def _upstream_get(request: Request, url: httpx.URL, headers: dict[str, str]) -> httpx.Response:
     """수명 주기 client가 있으면 connection pool을 재사용한다.
 
     lifespan을 시작하지 않는 단위 테스트 등에서는 짧게 사는 client로도 동작하게 한다.
     """
-    if client := getattr(request.app.state, "vernissage_http_client", None):
+    if client := getattr(request.app.state, "upstream_http_client", None):
         return await client.get(url, headers=headers)
     async with httpx.AsyncClient(timeout=10.0) as client:
         return await client.get(url, headers=headers)
 
 
+def _legal_document_request(site: str, url_path: str) -> tuple[str, str, str] | None:
+    """법률 문서 URL을 해당 앱 백엔드의 공개 문서 API 요청으로 바꾼다.
+
+    홈페이지는 URL과 페이지 외관만 맡고, 실제 약관 원문은 각 앱 백엔드가 소유한다.
+    일본어 법률 문서는 기존처럼 영어판으로 리다이렉트된 뒤 이 함수에 도달한다.
+    """
+    language = "ko"
+    document_path = url_path
+    if document_path.startswith("en/"):
+        language = "en"
+        document_path = document_path[3:]
+
+    if document_path not in ("legal/terms-of-service", "legal/privacy-policy"):
+        return None
+    document = document_path.rsplit("/", 1)[1]
+
+    if site == "vernissage":
+        return (VERNISSAGE_API_BASE_URL, VERNISSAGE_PUBLIC_WEB_API_TOKEN, f"legal/{language}/{document}")
+    if site == "keepsake":
+        return (KEEPSAKE_API_BASE_URL, KEEPSAKE_PUBLIC_WEB_API_TOKEN, f"legal/{language}/{document}")
+    return None
+
+
+async def _proxy_legal_document(request: Request, site: str, url_path: str) -> Response | None:
+    """앱 백엔드가 소유한 법률 문서를 같은 공개 사이트 URL로 전달한다."""
+    target = _legal_document_request(site, url_path)
+    if target is None:
+        return None
+    api_base_url, token, api_path = target
+    if not api_base_url:
+        return PlainTextResponse(
+            f"{site.title()} legal API is not configured", status_code=503, headers={"Cache-Control": "no-store"}
+        )
+
+    headers = {"Accept": "text/html"}
+    if token:
+        headers["X-Public-Web-Token"] = token
+    try:
+        upstream = await _upstream_get(request, httpx.URL(f"{api_base_url}/public-web/{api_path}"), headers)
+    except httpx.HTTPError:
+        return PlainTextResponse(
+            f"{site.title()} legal API is unavailable", status_code=502, headers={"Cache-Control": "no-store"}
+        )
+
+    response_headers = {
+        name: upstream.headers[name] for name in ("content-type", "etag", "last-modified") if name in upstream.headers
+    }
+    # 법률 문서는 변경 후 홈페이지를 다시 배포하지 않아도 즉시 보여야 한다.
+    response_headers["cache-control"] = "no-store"
+    return Response(content=upstream.content, status_code=upstream.status_code, headers=response_headers)
+
+
 async def _vernissage_upstream_request(
     request: Request, method: str, url: str, content: bytes, headers: dict[str, str]
 ) -> httpx.Response:
-    if client := getattr(request.app.state, "vernissage_http_client", None):
+    if client := getattr(request.app.state, "upstream_http_client", None):
         return await client.request(method, url, content=content, headers=headers)
     async with httpx.AsyncClient(timeout=10.0) as client:
         return await client.request(method, url, content=content, headers=headers)
@@ -241,7 +295,7 @@ async def vernissage_public_web_api(request: Request, api_path: str) -> Response
         headers["X-Public-Web-Token"] = VERNISSAGE_PUBLIC_WEB_API_TOKEN
 
     try:
-        upstream = await _vernissage_upstream_get(request, url, headers)
+        upstream = await _upstream_get(request, url, headers)
     except httpx.HTTPError:
         return PlainTextResponse("Vernissage API is unavailable", status_code=502)
 
@@ -311,6 +365,10 @@ async def serve(request: Request, url_path: str) -> Response:
         if request.url.query:
             target += f"?{request.url.query}"
         return RedirectResponse(target, status_code=301)
+
+    legal_document = await _proxy_legal_document(request, site, url_path)
+    if legal_document is not None:
+        return legal_document
 
     path = resolve_file(site_dir, url_path)
     if path is None:
