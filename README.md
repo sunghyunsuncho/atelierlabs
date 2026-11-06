@@ -34,6 +34,12 @@ tests/           라우팅 테스트
 uv run --with pillow python scripts/build_brand_assets.py
 ```
 
+### 홈페이지 대표 이미지
+
+세 서비스의 홈페이지는 사진 기반 히어로 영역으로 각 서비스의 분위기와 이야기를 먼저 보여 준다.
+Vernissage와 Keepsake는 이전·현재 대표 이미지를 번갈아 보여 주고, Atelier Labs는 세 서비스의
+대표 이미지를 함께 순환해 스튜디오 전체의 방향을 소개한다.
+
 URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 
 - `/` → `index.html`
