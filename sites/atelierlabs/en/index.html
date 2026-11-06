@@ -43,7 +43,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="/assets/site.css?v=20261106r" />
+<link rel="stylesheet" href="/assets/site.css?v=20261106rotation" />
 </head>
 <body>
   <header class="site-header">
@@ -59,16 +59,26 @@
   </header>
 
   <main>
-    <div class="wrap">
-      <section class="hero">
-        <img class="hero-mark" src="/assets/icon.png" alt="" width="112" height="112" />
-        <!-- ko/ja의 현지어 이름 줄과 같은 높이를 비워 둬 세 언어의 위치를 맞춘다 -->
-        <p class="hero-reading" aria-hidden="true">&nbsp;</p>
-        <h1 class="hero-title">Atelier Labs</h1>
-        <p class="hero-tagline">Discover what moves you,<br />and <em>keep it close</em>.</p>
-        <p class="lead">Atelier Labs makes apps that help you discover the beauty you meet in the world and the moments that matter in your life, record them, and come back to them someday.</p>
-      </section>
+    <section class="hero">
+      <div class="hero-frame" data-hero-rotation data-interval="6000">
+          <img class="hero-slide is-active" src="/assets/hero-1.jpg" alt="" aria-hidden="true" width="1774" height="887" fetchpriority="high" />
+          <img class="hero-slide hero-align-right" data-src="/assets/hero-2.jpg" alt="" aria-hidden="true" width="1672" height="941" />
+          <img class="hero-slide" data-src="/assets/hero-3.jpg" alt="" aria-hidden="true" width="1774" height="887" />
+          <img class="hero-slide" data-src="/assets/hero-4.jpg" alt="" aria-hidden="true" width="1672" height="941" />
+          <img class="hero-slide" data-src="/assets/hero-5.jpg" alt="" aria-hidden="true" width="1774" height="887" />
+          <img class="hero-slide" data-src="/assets/hero-6.jpg" alt="" aria-hidden="true" width="1672" height="941" />
+      </div>
+      <div class="wrap hero-copy">
+          <img class="hero-mark" src="/assets/icon.png" alt="" width="112" height="112" />
+          <!-- ko/ja의 현지어 이름 줄과 같은 높이를 비워 둬 세 언어의 위치를 맞춘다 -->
+          <p class="hero-reading" aria-hidden="true">&nbsp;</p>
+          <h1 class="hero-title">Atelier Labs</h1>
+          <p class="hero-tagline">Discover what moves you,<br />and <em>keep it close</em>.</p>
+          <p class="lead">Atelier Labs makes apps that help you discover the beauty you meet in the world and the moments that matter in your life, record them, and come back to them someday.</p>
+      </div>
+    </section>
 
+    <div class="wrap">
       <section class="section" id="apps">
         <span class="eyebrow">01 / Apps</span>
         <h2 class="section-title">The apps</h2>
@@ -254,5 +264,6 @@
   </footer>
   <script src="/assets/lang-menu.js?v=1" defer></script>
   <script src="/assets/screens.js?v=1" defer></script>
+  <script src="/assets/hero-rotation.js?v=1" defer></script>
 </body>
 </html>

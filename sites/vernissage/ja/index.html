@@ -19,11 +19,11 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://vernissage.atelierlabs.co.kr/ja/" />
 <meta property="og:locale" content="ja_JP" />
-<meta property="og:image" content="https://vernissage.atelierlabs.co.kr/assets/hero-museum.jpg" />
+<meta property="og:image" content="https://vernissage.atelierlabs.co.kr/assets/hero-2.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ヴェルニサージュ - アート情報の検索・鑑賞記録" />
 <meta name="twitter:description" content="気になる作家や作品を検索して、保存して、記録する場所。" />
-<meta name="twitter:image" content="https://vernissage.atelierlabs.co.kr/assets/hero-museum.jpg" />
+<meta name="twitter:image" content="https://vernissage.atelierlabs.co.kr/assets/hero-2.png" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -73,7 +73,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="/assets/home.css?v=20261106s" />
+<link rel="stylesheet" href="/assets/home.css?v=20261106rotation" />
 </head>
 <body>
   <header class="site-header">
@@ -93,8 +93,9 @@
   </header>
 
   <div class="hero">
-    <div class="hero-frame">
-      <img src="/assets/hero-museum.jpg" alt="抽象画を鑑賞する美術館の来館者" />
+    <div class="hero-frame" data-hero-rotation data-interval="6000">
+      <img class="hero-slide is-active" src="/assets/hero-1.jpg" alt="" aria-hidden="true" width="1774" height="887" fetchpriority="high" />
+      <img class="hero-slide" data-src="/assets/hero-2.jpg" alt="" aria-hidden="true" width="1672" height="941" />
     </div>
     <div class="tagline-row">
       <img class="hero-mark" src="/assets/hero-mark.png" alt="" width="112" height="112" />
@@ -286,5 +287,6 @@
   </footer>
   <script src="/assets/nav.js?v=1" defer></script>
   <script src="/assets/lang-menu.js?v=1" defer></script>
+  <script src="/assets/hero-rotation.js?v=1" defer></script>
 </body>
 </html>

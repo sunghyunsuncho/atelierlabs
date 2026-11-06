@@ -17,7 +17,7 @@
 <meta property="og:description" content="모든 순간을 저장하기보다, 소중한 순간을 선택한다." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://keepsake.atelierlabs.co.kr/" />
-<meta property="og:image" content="https://keepsake.atelierlabs.co.kr/assets/icon.png" />
+<meta property="og:image" content="https://keepsake.atelierlabs.co.kr/assets/hero-2.png" />
 <style>
   :root { --paper: #FFFFFF; --surface: #FAF8F4; --ink: #151515; --muted: #5c5c5c; --line: rgba(21,21,21,.16); --coral: #B26634; }
   * { box-sizing: border-box; }
@@ -29,8 +29,14 @@
     line-height: 1.7; letter-spacing: -0.025em; -webkit-font-smoothing: antialiased;
   }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  /* 세 사이트 공통 히어로: 아이콘 → 현지어 이름 → 큰 브랜드명 → 슬로건 → 설명 → 버튼 */
-  main { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: clamp(56px, 8vw, 120px) clamp(20px, 4.4vw, 72px) clamp(56px, 7vw, 104px); }
+  /* 사진을 히어로 전체 배경으로 두고, 내용은 그 위에 겹친다. */
+  main { position: relative; flex: 1; display: flex; min-height: max(510px, min(67vw, 780px)); overflow: hidden; border-bottom: 1px solid var(--line); }
+  .hero-frame { position: absolute; inset: 0; overflow: hidden; background: var(--surface); }
+  .hero-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255, 252, 247, .75) 0%, rgba(255, 252, 247, .48) 43%, rgba(255, 252, 247, .12) 72%, rgba(255, 252, 247, .08) 100%); }
+  .hero-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .hero-frame .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 900ms ease; }
+  .hero-frame .hero-slide.is-active { opacity: 1; }
+  .hero-copy { position: relative; z-index: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: clamp(56px, 8vw, 120px) clamp(20px, 4.4vw, 72px) clamp(56px, 7vw, 104px); }
   .hero-mark { display: block; width: clamp(80px, 9vw, 112px); height: auto; margin: 0 0 36px; }
   .hero-reading { margin: 0 0 10px; color: var(--muted); font-size: clamp(15px, 1.5vw, 20px); font-weight: 700; line-height: 1.3; letter-spacing: .02em; }
   .hero-title { margin: 0 0 clamp(20px, 2.4vw, 32px); font-size: clamp(56px, 10vw, 140px); line-height: .92; letter-spacing: -.05em; }
@@ -49,12 +55,15 @@
   .store-badge .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: rgba(255, 255, 255, .72); }
   .store-badge .store-name { font-size: 18px; font-weight: 700; }
   @media (max-width: 760px) {
+    main { min-height: max(570px, 132vw); }
+    .hero-frame img { object-position: 58% center; }
     .cta { flex-wrap: nowrap; gap: 8px; }
     .store-badge { width: auto; flex: 1 1 0; min-width: 0; max-width: 180px; padding: 13px 15px; gap: 10px; }
     .store-badge svg { width: 26px; height: 26px; }
     .store-badge .store-name { font-size: 15px; }
     .store-badge .eyebrow { font-size: 9.5px; }
   }
+  @media (prefers-reduced-motion: reduce) { .hero-frame .hero-slide { transition: none; } }
   .site-header { border-bottom: 1px solid var(--line); }
   .site-header .wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; max-width: 1200px; height: 64px; margin: 0 auto; padding: 0 clamp(20px, 4.4vw, 72px); }
   .logo { display: inline-flex; align-items: center; gap: 10px; line-height: 0; text-decoration: none; }
@@ -130,6 +139,8 @@
     </div>
   </header>
   <main>
+    <div class="hero-frame" data-hero-rotation data-interval="6000"><img class="hero-slide is-active" src="/assets/hero-1.jpg" alt="" aria-hidden="true" width="1774" height="887" fetchpriority="high" /><img class="hero-slide" data-src="/assets/hero-2.jpg" alt="" aria-hidden="true" width="1672" height="941" /></div>
+    <div class="hero-copy">
     <img class="hero-mark" src="/assets/hero-mark.png" alt="" width="112" height="112" />
     <p class="hero-reading" lang="ko">킵세이크</p>
     <h1 class="hero-title">Keepsake</h1>
@@ -157,6 +168,7 @@
         </span>
       </span>
     </div>
+    </div>
   </main>
   <footer class="site-footer">
     <div class="footer-top">
@@ -173,5 +185,6 @@
     <div class="footer-bottom"><span>문의: atelierlabs.kr@gmail.com</span><span>© 2026 Atelier Labs. All rights reserved.</span></div>
   </footer>
   <script src="/assets/lang-menu.js?v=1" defer></script>
+  <script src="/assets/hero-rotation.js?v=1" defer></script>
 </body>
 </html>

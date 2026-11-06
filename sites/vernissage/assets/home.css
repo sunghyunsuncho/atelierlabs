@@ -84,6 +84,7 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
 /* hero — 미술관 사진을 배경으로 깔고, 내용은 atelierlabs·keepsake와 같은 위치(위 여백·좌측 정렬)에 둔다 */
 .hero { position: relative; display: flex; min-height: max(510px, min(67vw, 780px)); overflow: hidden; border-bottom: 1px solid var(--line); }
 .hero-frame { position: absolute; inset: 0; overflow: hidden; }
+.hero-frame::before { content: ""; position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(255, 252, 247, .75) 0%, rgba(255, 252, 247, .48) 43%, rgba(255, 252, 247, .12) 72%, rgba(255, 252, 247, .08) 100%); }
 .hero-frame::after {
   content: "V\A E\A R\A N\A I\A S\A S\A A\A G\A E";
   white-space: pre;
@@ -96,8 +97,11 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
   font-size: 10px;
   line-height: 1.1;
   letter-spacing: .12em;
+  z-index: 2;
 }
-.hero-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; }
+.hero-frame img { position: relative; z-index: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; }
+.hero-frame .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 900ms ease; }
+.hero-frame .hero-slide.is-active { opacity: 1; }
 .tagline-row {
   position: relative;
   z-index: 2;
@@ -274,6 +278,9 @@ main:not(.public-main) > section > h2::before {
   .features { grid-template-columns: 1fr; }
   .feature, .feature:nth-child(n) { padding: 24px 0 28px; }
   .feature-icon { margin-bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-frame .hero-slide { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
