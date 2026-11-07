@@ -69,7 +69,7 @@
   }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   /* 写真をヒーロー全体の背景に置き、内容はその上に重ねる。 */
-  main { position: relative; flex: 1; display: flex; min-height: max(510px, min(67vw, 780px)); overflow: hidden; border-bottom: 1px solid var(--line); }
+  main { position: relative; flex: 1; display: flex; min-height: max(510px, min(57vw, 680px)); overflow: hidden; border-bottom: 1px solid var(--line); }
   .hero-frame { position: absolute; inset: 0; overflow: hidden; background: var(--surface); }
   .hero-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255, 252, 247, .75) 0%, rgba(255, 252, 247, .48) 43%, rgba(255, 252, 247, .12) 72%, rgba(255, 252, 247, .08) 100%); }
   .hero-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
@@ -169,6 +169,7 @@
     .footer-bottom { flex-direction: column; margin-top: 28px; }
   }
 </style>
+<link rel="stylesheet" href="/shared/hero-layout.css?v=2" />
 </head>
 <body>
   <header class="site-header">
@@ -177,7 +178,7 @@
       <details class="lang-switch"><summary aria-label="言語を選択: 日本語"><svg class="lang-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9M12 3c-2.5 2.7-3.8 5.7-3.8 9s1.3 6.3 3.8 9"/></svg><span class="lang-current">JA</span><svg class="lang-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></summary><div class="lang-menu"><a class="lang-option" href="/" hreflang="ko" lang="ko"><span>한국어</span><span class="lang-code">KO</span></a><a class="lang-option" href="/en/" hreflang="en" lang="en"><span>English</span><span class="lang-code">EN</span></a><span class="lang-option" aria-current="true" lang="ja"><span>日本語</span><span class="lang-code">JA</span></span></div></details>
     </div>
   </header>
-  <main>
+  <main class="hero-layout">
     <div class="hero-frame" data-hero-rotation data-interval="6000"><img class="hero-slide is-active" src="/assets/hero-1.jpg" alt="" aria-hidden="true" width="1774" height="887" fetchpriority="high" /><img class="hero-slide" data-src="/assets/hero-2.jpg" alt="" aria-hidden="true" width="1672" height="941" /></div>
     <div class="hero-copy">
     <img class="hero-mark" src="/assets/hero-mark.png" alt="" width="112" height="112" />

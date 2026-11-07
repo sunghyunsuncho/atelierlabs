@@ -16,6 +16,7 @@ URL -> 파일 규칙 (sites/<site>/ 기준):
     일반 경로              -> 확장자 없는 정적 HTML 파일
     /legal/...            -> 앱 백엔드가 소유한 법률 문서 프록시
     /assets/icon.png      -> assets/icon.png
+    /shared/...           -> sites/shared/ 아래 공통 정적 자산
 
 언어: 한국어는 루트, 영어·일본어는 /en/, /ja/ 아래 같은 경로 (예: /en/support -> en/support.html).
 """
@@ -37,6 +38,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Red
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "atelierlabs.co.kr")
 DEFAULT_SITE = os.environ.get("DEFAULT_SITE", "atelierlabs")
 SITES_DIR = Path(os.environ.get("SITES_DIR", Path(__file__).resolve().parent.parent / "sites")).resolve()
+SHARED_DIR = (SITES_DIR / "shared").resolve()
 
 # Vernissage 공개 웹 데이터는 별도 프로젝트의 API가 소유한다. 페이지는 이 서버와
 # 같은 origin의 /api/vernissage/public-web/...만 호출하므로, 브라우저에 API의 내부
@@ -551,6 +553,13 @@ async def serve(request: Request, url_path: str) -> Response:
     if site is None:
         return PlainTextResponse("Not Found", status_code=404)
     site_dir = (SITES_DIR / site).resolve()
+
+    # 사이트 구분 없이 같은 공통 스타일·자산을 제공한다.
+    if url_path.startswith("shared/"):
+        path = resolve_file(SHARED_DIR, url_path.removeprefix("shared/"))
+        if path is None:
+            return PlainTextResponse("Not Found", status_code=404)
+        return FileResponse(path, headers={"Cache-Control": ASSET_CACHE})
 
     if site == "vernissage" and url_path == "sitemap.xml" and (sitemap := await _vernissage_dynamic_sitemap(request)):
         return sitemap

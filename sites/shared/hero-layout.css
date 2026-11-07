@@ -1,0 +1,26 @@
+/* Desktop hero layout shared by Atelier Labs, Vernissage, and Keepsake. */
+@media (min-width: 761px) {
+  :is(.hero, main.hero-layout) {
+    height: clamp(540px, 45vw, 620px);
+    min-height: 0;
+    align-items: center;
+  }
+
+  main.hero-layout { flex: 0 0 auto; }
+
+  :is(.hero-copy, .tagline-row) {
+    padding-top: clamp(36px, 4vw, 56px);
+    padding-bottom: clamp(36px, 3vw, 48px);
+  }
+
+  .hero-mark { width: 72px; margin-bottom: 16px; }
+  .hero-reading { margin-bottom: 4px; font-size: 16px; }
+  :is(.hero-copy, .tagline-row) :is(h1.hero-title, .hero-title) { margin-bottom: 12px; font-size: clamp(56px, 7vw, 96px); }
+  .hero-tagline { margin-bottom: 8px; font-size: clamp(20px, 2vw, 28px); }
+
+  :is(.hero-copy, .tagline-row) .lead { min-height: 0; }
+  :is(.hero-copy, .tagline-row) .cta { margin-top: 16px; }
+  :is(.hero-copy, .tagline-row) .store-badge { padding: 10px 18px 10px 14px; }
+  :is(.hero-copy, .tagline-row) .store-badge svg { width: 24px; height: 24px; }
+  :is(.hero-copy, .tagline-row) .store-badge .store-name { font-size: 16px; }
+}

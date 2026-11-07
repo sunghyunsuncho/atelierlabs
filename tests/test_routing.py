@@ -171,6 +171,30 @@ def test_assets_and_root_icons():
     assert get("/favicon.ico", "atelierlabs.co.kr").headers["content-type"] == "image/png"
 
 
+@pytest.mark.parametrize("host", ["atelierlabs.co.kr", "vernissage.atelierlabs.co.kr", "keepsake.atelierlabs.co.kr"])
+def test_shared_hero_layout_asset(host):
+    res = get("/shared/hero-layout.css", host)
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("text/css")
+    assert res.headers["cache-control"] == main.ASSET_CACHE
+    assert "height: clamp(540px, 45vw, 620px)" in res.text
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/shared/nope.css", "/shared/../atelierlabs/index.html", "/shared/%2e%2e/atelierlabs/index.html"],
+)
+def test_shared_assets_do_not_expose_other_files(path):
+    assert get(path, "vernissage.atelierlabs.co.kr").status_code == 404
+
+
+def test_every_homepage_loads_the_shared_hero_layout():
+    for site in main.SITES.values():
+        for home in ("index.html", "en/index.html", "ja/index.html"):
+            html = (main.SITES_DIR / site / home).read_text(encoding="utf-8")
+            assert 'href="/shared/hero-layout.css?v=2"' in html
+
+
 @pytest.mark.parametrize("path", ["/../app/main.py", "/%2e%2e/app/main.py", "/assets/../../keepsake/index.html"])
 def test_path_traversal_blocked(path):
     res = get(path, "vernissage.atelierlabs.co.kr")

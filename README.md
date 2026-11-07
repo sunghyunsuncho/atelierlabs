@@ -20,6 +20,7 @@ sites/<site>/    사이트별 정적 파일 (HTML, assets/, robots.txt, sitemap.
   en/, ja/       영어·일본어 페이지 (한국어 페이지와 같은 경로)
                  스타일은 페이지마다 넣지 않고 공용 CSS를 쓴다:
                  atelierlabs/assets/site.css, vernissage/assets/home.css(랜딩), vernissage/assets/public.css(공개 콘텐츠), vernissage/assets/legal.css·keepsake/assets/legal.css(약관)
+  shared/        세 사이트가 함께 쓰는 정적 자산 (hero-layout.css)
 brand/           사이트 로고·폰트 원본 (서비스되지 않음)
 scripts/         brand/ 원본으로 웹용 이미지를 만드는 스크립트
 tests/           라우팅 테스트
@@ -40,12 +41,16 @@ uv run --with pillow python scripts/build_brand_assets.py
 Vernissage와 Keepsake는 이전·현재 대표 이미지를 번갈아 보여 주고, Atelier Labs는 세 서비스의
 대표 이미지를 함께 순환해 스튜디오 전체의 방향을 소개한다.
 
+세 홈의 데스크톱 히어로 규격은 `sites/shared/hero-layout.css`에서 함께 관리한다. 각 도메인은
+동일한 `/shared/hero-layout.css` 경로로 이 파일을 받아 일관된 영역 크기와 배치를 사용한다.
+
 URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 
 - `/` → `index.html`
 - 일반 URL은 확장자 없는 정적 HTML 파일로 매핑된다. 단, 앱의 이용약관·개인정보 처리방침 URL은
   해당 앱 백엔드에서 프록시한다. 아래 [이용약관·개인정보 처리방침](#이용약관개인정보-처리방침)을 참고한다.
 - `/favicon.ico`, `/apple-touch-icon.png` → `assets/favicon.png`, `assets/apple-touch-icon.png`
+- `/shared/...` → `sites/shared/`의 모든 사이트 공통 자산
 - 없는 경로 → `<lang>/404.html`, 없으면 `404.html`, 그것도 없으면 일반 텍스트 404
 
 ## 다국어
