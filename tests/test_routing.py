@@ -215,6 +215,73 @@ def test_vernissage_public_api_proxy_is_not_available_on_other_sites():
     assert get("/api/vernissage/public-web/home", "atelierlabs.co.kr").status_code == 404
 
 
+def test_vernissage_public_details_are_server_rendered_for_search(monkeypatch):
+    async def upstream(request, url, headers):
+        assert str(url) == "http://vernissage-api:8000/public-web/docent/notes/35"
+        assert headers["X-App-Language"] == "ko"
+        return httpx.Response(
+            200,
+            json={
+                "note": {
+                    "title": "A museum story",
+                    "excerpt": "A search-ready summary.",
+                    "content": "A search-ready body.",
+                    "thumbnail_url": "https://images.example/note.jpg",
+                    "published_at": "2026-11-01T00:00:00Z",
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get("/docent/notes/35", "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert 'name="robots" content="index, follow"' in res.text
+    assert 'rel="canonical" href="https://vernissage.atelierlabs.co.kr/docent/notes/35"' in res.text
+    assert "A search-ready body." in res.text
+    assert '"@type": "Article"' in res.text
+    assert 'name="robots" content="noindex"' not in res.text
+
+
+def test_missing_vernissage_public_detail_is_a_real_404(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(404)
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    assert get("/exhibitions/999999", "vernissage.localhost:8000").status_code == 404
+
+
+def test_vernissage_sitemap_adds_public_details_and_caches(monkeypatch):
+    calls = []
+
+    async def upstream(request, url, headers):
+        calls.append(str(url))
+        endpoint = str(url).rsplit("/public-web/", 1)[1]
+        payloads = {
+            "docent/notes": {"items": [{"id": 36, "published_at": "2026-11-06T15:00:00Z"}], "has_next": False},
+            "exhibitions?tab=ongoing": {
+                "items": [{"id": 16915, "updated_at": "2026-11-02T13:29:55Z"}],
+                "has_next": False,
+            },
+            "art-events?status=current": {"items": [{"id": 37}], "has_next": False},
+        }
+        return httpx.Response(200, json=payloads[endpoint])
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "VERNISSAGE_SITEMAP_CACHE", None)
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    first = get("/sitemap.xml", "vernissage.localhost:8000")
+    assert first.status_code == 200
+    assert "https://vernissage.atelierlabs.co.kr/docent/notes/36" in first.text
+    assert "https://vernissage.atelierlabs.co.kr/en/exhibitions/16915" in first.text
+    assert "<lastmod>2026-11-02</lastmod>" in first.text
+    assert "art-events/37</loc><lastmod>" not in first.text
+    first_call_count = len(calls)
+    assert get("/sitemap.xml", "vernissage.localhost:8000").text == first.text
+    assert len(calls) == first_call_count
+
+
 def test_legal_documents_are_proxied_from_the_owning_backend(monkeypatch):
     seen = []
 

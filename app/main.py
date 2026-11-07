@@ -22,8 +22,11 @@ URL -> 파일 규칙 (sites/<site>/ 기준):
 
 from __future__ import annotations
 
+import html
+import json
 import os
 import re
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -64,9 +67,11 @@ LANGS = ("en", "ja")
 # 정적 파일 규칙으로는 /exhibitions/123 같은 동적 상세 경로를 찾을 수 없어서 여기서 shell을 준다.
 VERNISSAGE_PUBLIC_WEB_PREFIXES = ("docent/notes", "exhibitions", "art-events")
 VERNISSAGE_CLIENT_API_PATHS = {"test", "score", "web-events"}
+VERNISSAGE_SEO_DETAIL = re.compile(r"^(?:(en|ja)/)?(docent/notes|exhibitions|art-events)/(\d+)$")
 
 HTML_CACHE = "public, max-age=300"
 ASSET_CACHE = "public, max-age=86400"
+VERNISSAGE_SITEMAP_CACHE: tuple[float, str] | None = None
 
 
 @asynccontextmanager
@@ -268,6 +273,199 @@ def _vary_with_language(vary: str | None) -> str:
     return ", ".join(values)
 
 
+async def _vernissage_public_json(request: Request, endpoint: str, language: str) -> tuple[dict | None, int]:
+    """공개 API에서 SEO 문서용 데이터만 서버에서 가져온다."""
+    if not VERNISSAGE_API_BASE_URL:
+        return None, 503
+    headers = {"Accept": "application/json", "X-App-Language": language}
+    if VERNISSAGE_PUBLIC_WEB_API_TOKEN:
+        headers["X-Public-Web-Token"] = VERNISSAGE_PUBLIC_WEB_API_TOKEN
+    try:
+        response = await _upstream_get(request, httpx.URL(f"{VERNISSAGE_API_BASE_URL}/public-web/{endpoint}"), headers)
+    except httpx.HTTPError:
+        return None, 502
+    if response.status_code != 200:
+        return None, response.status_code
+    try:
+        return response.json(), 200
+    except ValueError:
+        return None, 502
+
+
+def _seo_text(value: object, limit: int = 160) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text if len(text) <= limit else f"{text[: limit - 1].rstrip()}…"
+
+
+def _public_url(path: str) -> str:
+    return f"https://vernissage.{ROOT_DOMAIN}/{path.lstrip('/')}"
+
+
+def _render_vernissage_detail_shell(
+    site_dir: Path, language: str, path: str, title: str, description: str, body: str, image: str | None, schema: dict
+) -> str:
+    """기존 인터랙티브 셸에 크롤러가 즉시 읽을 수 있는 본문과 메타데이터를 넣는다."""
+    lang_dir = language if language in LANGS else ""
+    shell = (site_dir / lang_dir / "public" / "index.html").read_text(encoding="utf-8")
+    canonical = _public_url(path)
+    content_path = re.sub(r"^(?:en|ja)/", "", path)
+
+    def alternate_url(prefix: str) -> str:
+        return _public_url(f"{prefix}/{content_path}" if prefix else content_path)
+
+    alternates = "\n".join(
+        f'<link rel="alternate" hreflang="{code}" href="{alternate_url(prefix)}" />'
+        for code, prefix in (("ko", ""), ("en", "en"), ("ja", "ja"))
+    )
+    image_meta = f'<meta property="og:image" content="{html.escape(str(image), quote=True)}" />' if image else ""
+    schema_json = json.dumps(schema, ensure_ascii=False).replace("</", "<\\/")
+    head = "\n".join(
+        (
+            '<meta name="robots" content="index, follow" />',
+            f'<link rel="canonical" href="{canonical}" />',
+            alternates,
+            f'<link rel="alternate" hreflang="x-default" href="{_public_url(content_path)}" />',
+            f'<meta name="description" content="{html.escape(description, quote=True)}" />',
+            f'<meta property="og:title" content="{html.escape(title, quote=True)}" />',
+            f'<meta property="og:description" content="{html.escape(description, quote=True)}" />',
+            '<meta property="og:type" content="article" />',
+            f'<meta property="og:url" content="{canonical}" />',
+            image_meta,
+            '<meta name="twitter:card" content="summary_large_image" />',
+            f'<script type="application/ld+json">{schema_json}</script>',
+        )
+    )
+    shell = shell.replace('<meta name="robots" content="noindex" />', "")
+    shell = re.sub(r"<title>.*?</title>", lambda _: f"<title>{html.escape(title)} | Vernissage</title>", shell, count=1)
+    shell = shell.replace("</head>", f"{head}\n</head>", 1)
+    return re.sub(
+        r'<main id="public-web-app" class="public-main" aria-live="polite">.*?</main>',
+        f'<main id="public-web-app" class="public-main" aria-live="polite">{body}</main>',
+        shell,
+        count=1,
+        flags=re.S,
+    )
+
+
+async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str) -> Response | None:
+    match = VERNISSAGE_SEO_DETAIL.fullmatch(url_path)
+    if not match:
+        return None
+    language = match.group(1) or "ko"
+    section, item_id = match.group(2), match.group(3)
+    data, status = await _vernissage_public_json(request, f"{section}/{item_id}", language)
+    if data is None:
+        # API 장애·미설정 시 기존 클라이언트 셸로 계속 제공한다. 실제로 존재하지 않는
+        # 콘텐츠만 404로 응답해 soft 404를 만들지 않는다.
+        return PlainTextResponse("Not Found", status_code=404) if status == 404 else None
+    item = data.get({"docent/notes": "note", "exhibitions": "exhibition", "art-events": "event"}[section])
+    if not isinstance(item, dict):
+        return PlainTextResponse("Not Found", status_code=404)
+    series = item.get("series") if isinstance(item.get("series"), dict) else {}
+    title = _seo_text(item.get("display_title") or item.get("title") or series.get("name"), 180)
+    if not title:
+        return PlainTextResponse("Not Found", status_code=404)
+    description = _seo_text(
+        item.get("excerpt") or item.get("description") or item.get("content") or series.get("description") or title
+    )
+    image = item.get("thumbnail_url") or item.get("image_url")
+    if section == "docent/notes":
+        content = item.get("content") or item.get("excerpt") or ""
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "description": description,
+            "image": image,
+            "datePublished": item.get("published_at"),
+            "mainEntityOfPage": _public_url(url_path),
+        }
+    else:
+        content = item.get("description") or series.get("description") or ""
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": title,
+            "description": description,
+            "image": image,
+            "startDate": item.get("start_date"),
+            "endDate": item.get("end_date"),
+            "url": _public_url(url_path),
+        }
+    content_html = html.escape(str(content)).replace("\n", "<br />")
+    image_url = html.escape(str(image), quote=True)
+    escaped_title = html.escape(title, quote=True)
+    image_html = f'<img class="detail-image" src="{image_url}" alt="{escaped_title}" />' if image else ""
+    body = "".join(
+        (
+            '<article class="detail">',
+            f"<h1>{html.escape(title)}</h1>",
+            image_html,
+            f'<p class="detail-text">{content_html}</p>',
+            "</article>",
+        )
+    )
+    return HTMLResponse(
+        _render_vernissage_detail_shell(site_dir, language, url_path, title, description, body, image, schema),
+        headers={"Cache-Control": HTML_CACHE},
+    )
+
+
+async def _vernissage_dynamic_sitemap(request: Request) -> Response | None:
+    """공개 API의 현재 노출 가능한 상세 URL을 언어별로 사이트맵에 추가한다."""
+    global VERNISSAGE_SITEMAP_CACHE
+    if VERNISSAGE_SITEMAP_CACHE and time.monotonic() - VERNISSAGE_SITEMAP_CACHE[0] < 300:
+        return Response(
+            VERNISSAGE_SITEMAP_CACHE[1], media_type="application/xml", headers={"Cache-Control": HTML_CACHE}
+        )
+    groups = (
+        ("docent/notes", "docent/notes"),
+        ("exhibitions?tab=ongoing", "exhibitions"),
+        ("art-events?status=current", "art-events"),
+    )
+    entries: list[tuple[str, str | None]] = []
+    for endpoint, section in groups:
+        page = 1
+        while page <= 50:  # API의 비정상적인 has_next 응답으로 무한 요청하지 않는다.
+            page_endpoint = endpoint if page == 1 else f"{endpoint}{'&' if '?' in endpoint else '?'}page={page}"
+            data, status = await _vernissage_public_json(request, page_endpoint, "ko")
+            if data is None or status != 200:
+                return None
+            for item in data.get("items", []):
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                modified = str(item.get("updated_at") or item.get("published_at") or "")[:10] or None
+                for prefix in ("", "en/", "ja/"):
+                    entries.append((f"{prefix}{section}/{item['id']}", modified))
+            if not data.get("has_next"):
+                break
+            page += 1
+    static = (
+        "",
+        "en/",
+        "ja/",
+        "legal/terms-of-service",
+        "legal/privacy-policy",
+        "legal/account-deletion",
+        "en/legal/terms-of-service",
+        "en/legal/privacy-policy",
+        "en/legal/account-deletion",
+    )
+    rows = []
+    for path in static:
+        rows.append(f"  <url><loc>{html.escape(_public_url(path))}</loc></url>")
+    for path, modified in entries:
+        lastmod = f"<lastmod>{modified}</lastmod>" if modified else ""
+        rows.append(f"  <url><loc>{html.escape(_public_url(path))}</loc>{lastmod}</url>")
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(rows)
+        + "\n</urlset>\n"
+    )
+    VERNISSAGE_SITEMAP_CACHE = (time.monotonic(), xml)
+    return Response(xml, media_type="application/xml", headers={"Cache-Control": HTML_CACHE})
+
+
 @app.get("/healthz", include_in_schema=False)
 async def healthz() -> dict[str, str]:
     return {"status": "ok"}
@@ -354,6 +552,9 @@ async def serve(request: Request, url_path: str) -> Response:
         return PlainTextResponse("Not Found", status_code=404)
     site_dir = (SITES_DIR / site).resolve()
 
+    if site == "vernissage" and url_path == "sitemap.xml" and (sitemap := await _vernissage_dynamic_sitemap(request)):
+        return sitemap
+
     # 브라우저가 <link rel="icon"> 없이도 루트에서 찾는 파일들
     if url_path in ROOT_ICON_FALLBACKS:
         found = next((n for n in ROOT_ICON_FALLBACKS[url_path] if (site_dir / "assets" / n).is_file()), None)
@@ -369,6 +570,9 @@ async def serve(request: Request, url_path: str) -> Response:
     legal_document = await _proxy_legal_document(request, site, url_path)
     if legal_document is not None:
         return legal_document
+
+    if site == "vernissage" and (seo_detail := await _vernissage_seo_detail(request, site_dir, url_path)):
+        return seo_detail
 
     path = resolve_file(site_dir, url_path)
     if path is None:

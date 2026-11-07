@@ -150,7 +150,8 @@ vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는
 - 화면 shell은 이 리포가 관리하지만, 이용약관·개인정보 처리방침의 원본은 Vernissage 백엔드가 관리하고 이 서버가 프록시한다.
 - `canonical`·`hreflang`·`og:*`·JSON-LD 주소는 `https://vernissage.atelierlabs.co.kr`
 - 공개 도슨트·전시·비엔날레·아트페어·예술취향테스트 화면은 이 리포의 정적 shell과 Vernissage 공개 API로 제공한다.
-  소개 페이지는 `https://www.vernissage.kr/about`을 계속 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
+  도슨트·전시·아트이벤트의 상세 페이지는 같은 API 데이터로 서버 HTML과 검색 메타데이터를 먼저 제공하고,
+  `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 소개 페이지는 `https://www.vernissage.kr/about`을 계속 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
   AdSense 자리표시는 두지 않는다.
 - 개인정보 처리방침 제11조에서 웹사이트 AdSense·쿠키 고지를 뺐다(웹 광고는 게재하지 않음). 앱의 AdMob 고지는 남아 있다.
 
