@@ -53,6 +53,9 @@ URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 - 한국어는 루트, 영어·일본어는 `/en/`, `/ja/` 아래 **같은 경로**에 둔다. 페이지를 추가하면 세 언어를 함께 만든다.
 - 각 페이지에는 `canonical`(자기 주소), `hreflang` ko/en/ja + `x-default`(한국어), 헤더의 KO·EN·JA 전환, 푸터의 언어 링크를 넣는다.
 - 사이트맵에 언어별 주소를 모두 싣는다.
+- 각 사이트 홈(ko/en/ja)에는 `og:locale`, `twitter:*`, JSON-LD(`Organization`·`WebSite`·`MobileApplication`)를 둔다.
+  Atelier Labs 홈의 JSON-LD에는 Vernissage·Keepsake 앱을 모두 싣는다. 사이트맵에 실린 정적 문서(예: 계정 삭제 안내)에는
+  `description`, `robots`(index, follow), `og:*`를 넣는다.
 - **Vernissage·Keepsake의 약관·개인정보 처리방침은 한국어·영어만 있다** (Vernissage는 계정 삭제 안내 포함). 일본어 페이지는
   영어판(`/en/legal/…`)으로 링크하고 "（英語）"라고 표시한다. `/ja/legal/…`로 들어오면 서버가 `/en/legal/…`로 301 한다.
   문서 원문은 각 앱 백엔드가 `/public-web/legal/{ko|en}/{문서}`로 서빙하고 이 서버는 프록시만 한다. Atelier Labs의 개인정보 처리방침·이용약관
