@@ -54,6 +54,7 @@ URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
   해당 앱 백엔드에서 프록시한다. 아래 [이용약관·개인정보 처리방침](#이용약관개인정보-처리방침)을 참고한다.
 - `/favicon.ico`, `/apple-touch-icon.png` → `assets/favicon.png`, `assets/apple-touch-icon.png`
 - `/shared/...` → `sites/shared/`의 모든 사이트 공통 자산
+- `/app-ads.txt` → AdMob 앱 인증용 정적 파일. Vernissage 및 Atelier Labs 루트 도메인에서 제공한다.
 - 없는 경로 → `<lang>/404.html`, 없으면 `404.html`, 그것도 없으면 일반 텍스트 404
 
 ## 다국어
