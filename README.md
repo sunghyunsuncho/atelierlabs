@@ -41,8 +41,11 @@ uv run --with pillow python scripts/build_brand_assets.py
 Vernissage와 Keepsake는 이전·현재 대표 이미지를 번갈아 보여 주고, Atelier Labs는 세 서비스의
 대표 이미지를 함께 순환해 스튜디오 전체의 방향을 소개한다.
 
-세 홈의 데스크톱 히어로 규격은 `sites/shared/hero-layout.css`에서 함께 관리한다. 각 도메인은
-동일한 `/shared/hero-layout.css` 경로로 이 파일을 받아 일관된 영역 크기와 배치를 사용한다.
+세 홈의 히어로 규격(데스크톱·휴대폰 모두)은 `sites/shared/hero-layout.css`에서 함께 관리한다. 각 도메인은
+동일한 `/shared/hero-layout.css` 경로로 이 파일을 받아, 세 사이트가 같은 영역 크기와 같은 아이콘·글자 위치를 쓴다.
+
+Atelier Labs와 Vernissage의 상단 메뉴는 좁은 화면에서 ☰ 버튼으로 여닫는다. 두 사이트는 같은
+`assets/nav.js`를 각자 두고 쓰므로 한쪽을 고치면 다른 쪽에도 복사한다(테스트가 두 파일이 같은지 확인한다).
 
 URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 
