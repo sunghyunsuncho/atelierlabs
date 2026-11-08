@@ -51,6 +51,82 @@ def test_app_ads_txt(host, method):
         assert res.text == "google.com, pub-4065599186318256, DIRECT, f08c47fec0942fa0\n"
 
 
+FINGERPRINT_A = ":".join(["AB"] * 32)
+FINGERPRINT_B = ":".join(["01"] * 32)
+
+
+def test_vernissage_app_link_association_files(monkeypatch):
+    fingerprints = (FINGERPRINT_A, FINGERPRINT_B)
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", fingerprints)
+    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
+
+    assetlinks = get("/.well-known/assetlinks.json", "vernissage.atelierlabs.co.kr")
+    assert assetlinks.status_code == 200
+    assert assetlinks.headers["content-type"].startswith("application/json")
+    assert assetlinks.json() == [
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "com.atelierlabs.vernissage",
+                "sha256_cert_fingerprints": list(fingerprints),
+            },
+        }
+    ]
+
+    association = get("/.well-known/apple-app-site-association", "vernissage.atelierlabs.co.kr")
+    assert association.status_code == 200
+    assert association.headers["content-type"].startswith("application/json")
+    detail = association.json()["applinks"]["details"][0]
+    assert detail["appID"] == "3BQ7Y687R9.com.atelierlabs.vernissage"
+    sections = [
+        "exhibitions",
+        "museums",
+        "artworks",
+        "artists",
+        "art-concepts",
+        "art-figures",
+        "art-events",
+        "docent/notes",
+    ]
+    # 앱에는 상세 화면만 있으므로 목록(/exhibitions)은 웹에 남고, 영어·일본어 주소도 앱으로 연다.
+    assert detail["paths"] == [f"/{lang}{section}/?*" for lang in ("", "en/", "ja/") for section in sections]
+
+
+@pytest.mark.parametrize("fingerprints", [(), (FINGERPRINT_A, "AA:BB:CC"), (FINGERPRINT_A.replace(":", ""),)])
+def test_vernissage_assetlinks_requires_valid_android_certificate_fingerprints(monkeypatch, fingerprints):
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", fingerprints)
+    response = get("/.well-known/assetlinks.json", "vernissage.atelierlabs.co.kr")
+    assert response.status_code == 503
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize("team_id", ["", "SHORT", "3BQ7Y687R9X"])
+def test_vernissage_aasa_requires_valid_apple_team_id(monkeypatch, team_id):
+    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", team_id)
+    response = get("/.well-known/apple-app-site-association", "vernissage.atelierlabs.co.kr")
+    assert response.status_code == 503
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD"])
+def test_vernissage_app_link_files_answer_head_without_redirect(monkeypatch, method):
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
+    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
+    for path in ("/.well-known/assetlinks.json", "/.well-known/apple-app-site-association"):
+        res = client.request(method, path, headers={"host": "vernissage.atelierlabs.co.kr"}, follow_redirects=False)
+        assert res.status_code == 200
+        assert res.headers["content-type"].startswith("application/json")
+
+
+# 다른 앱의 도메인에서 Vernissage 소유 선언을 내보내지 않는다.
+@pytest.mark.parametrize("host", ["atelierlabs.co.kr", "keepsake.atelierlabs.co.kr"])
+def test_app_link_files_only_on_vernissage(monkeypatch, host):
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
+    assert get("/.well-known/assetlinks.json", host).status_code == 404
+    assert get("/.well-known/apple-app-site-association", host).status_code == 404
+
+
 @pytest.mark.parametrize(
     "path",
     [

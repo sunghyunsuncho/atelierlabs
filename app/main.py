@@ -45,6 +45,32 @@ SHARED_DIR = (SITES_DIR / "shared").resolve()
 # 주소나 PUBLIC_WEB_API_TOKEN을 노출하지 않는다.
 VERNISSAGE_API_BASE_URL = os.environ.get("VERNISSAGE_API_BASE_URL", "").rstrip("/")
 VERNISSAGE_PUBLIC_WEB_API_TOKEN = os.environ.get("VERNISSAGE_PUBLIC_WEB_API_TOKEN", "")
+# Android App Links는 Google Play 앱 서명 인증서의 SHA-256 지문을 요구한다. 업로드 키는
+# 서명 키와 다를 수 있으므로 저장소에 고정하지 않고 Railway 환경 변수에서 받는다.
+VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS = tuple(
+    fingerprint.strip().upper()
+    for fingerprint in os.environ.get("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", "").split(",")
+    if fingerprint.strip()
+)
+# Apple Team ID는 공개 식별자지만, 환경별로 바꿀 여지를 위해 변수로 둔다.
+VERNISSAGE_APPLE_APP_LINK_TEAM_ID = os.environ.get("APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9").strip().upper()
+VERNISSAGE_APP_ID = "com.atelierlabs.vernissage"
+# mobile/app.json의 Android intentFilters와 같은 경로를 유지한다. 앱에는 상세 화면만 있으므로
+# 목록(/exhibitions 등)은 웹에 남기고 상세(/exhibitions/<id>)만 앱으로 연다. 언어 접두사는
+# 앱의 +native-intent.tsx가 떼어낸다.
+VERNISSAGE_APP_LINK_PREFIXES = (
+    "exhibitions",
+    "museums",
+    "artworks",
+    "artists",
+    "art-concepts",
+    "art-figures",
+    "art-events",
+    "docent/notes",
+)
+# keytool/Play Console 형식: 콜론으로 구분한 32바이트 16진수(대문자).
+SHA256_CERT_FINGERPRINT = re.compile(r"(?:[0-9A-F]{2}:){31}[0-9A-F]{2}")
+APPLE_TEAM_ID = re.compile(r"[A-Z0-9]{10}")
 KEEPSAKE_API_BASE_URL = os.environ.get("KEEPSAKE_API_BASE_URL", "").rstrip("/")
 KEEPSAKE_PUBLIC_WEB_API_TOKEN = os.environ.get("KEEPSAKE_PUBLIC_WEB_API_TOKEN", "")
 
@@ -64,6 +90,11 @@ ROOT_ICON_FALLBACKS: dict[str, tuple[str, ...]] = {
 
 # 한국어는 루트(/), 나머지 언어는 /<lang>/ 아래에 같은 경로로 둔다.
 LANGS = ("en", "ja")
+# "?*"는 한 글자 이상: 상세 id 없는 /exhibitions/는 앱에 화면이 없으므로 웹에 남긴다
+# (mobile/app.json의 pathPattern "/exhibitions/..*"와 같은 범위).
+VERNISSAGE_APP_LINK_PATHS = tuple(
+    f"/{lang}{prefix}/?*" for lang in ("", *(f"{code}/" for code in LANGS)) for prefix in VERNISSAGE_APP_LINK_PREFIXES
+)
 
 # Vernissage 공개 데이터 화면은 하나의 작은 클라이언트 앱이 목록·상세 경로를 모두 렌더링한다.
 # 정적 파일 규칙으로는 /exhibitions/123 같은 동적 상세 경로를 찾을 수 없어서 여기서 shell을 준다.
@@ -160,6 +191,55 @@ def _local_origin_rewriter(request: Request):
     suffix = f"localhost:{port}" if port else "localhost"
     pattern = re.compile(r"https://((?:[a-z0-9-]+\.)?)" + re.escape(ROOT_DOMAIN) + r"(?![a-z0-9.-])")
     return lambda html: pattern.sub(lambda m: f"http://{m.group(1)}{suffix}", html)
+
+
+def _vernissage_app_link_association(url_path: str) -> Response | None:
+    """Vernissage App Links/Universal Links 도메인 소유 선언을 반환한다.
+
+    검증 파일은 리다이렉트 없이 HTTPS 루트의 ``/.well-known/``에서 제공해야 한다.
+    설정이 없거나 형식이 틀린 배포를 성공처럼 보이지 않게 503으로 명시한다.
+    """
+    if url_path == ".well-known/assetlinks.json":
+        fingerprints = VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS
+        if not fingerprints:
+            return _misconfigured("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS is not configured")
+        # 형식이 틀린 지문이 하나라도 섞이면 검증이 조용히 실패하므로 전체를 거부한다.
+        if not all(SHA256_CERT_FINGERPRINT.fullmatch(fingerprint) for fingerprint in fingerprints):
+            return _misconfigured("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS is invalid")
+        body: object = [
+            {
+                "relation": ["delegate_permission/common.handle_all_urls"],
+                "target": {
+                    "namespace": "android_app",
+                    "package_name": VERNISSAGE_APP_ID,
+                    "sha256_cert_fingerprints": list(fingerprints),
+                },
+            }
+        ]
+    elif url_path == ".well-known/apple-app-site-association":
+        team_id = VERNISSAGE_APPLE_APP_LINK_TEAM_ID
+        if not team_id:
+            return _misconfigured("APPLE_APP_LINK_TEAM_ID is not configured")
+        if not APPLE_TEAM_ID.fullmatch(team_id):
+            return _misconfigured("APPLE_APP_LINK_TEAM_ID is invalid")
+        body = {
+            "applinks": {
+                "apps": [],
+                "details": [
+                    {
+                        "appID": f"{team_id}.{VERNISSAGE_APP_ID}",
+                        "paths": list(VERNISSAGE_APP_LINK_PATHS),
+                    }
+                ],
+            }
+        }
+    else:
+        return None
+    return Response(content=json.dumps(body), media_type="application/json", headers={"Cache-Control": HTML_CACHE})
+
+
+def _misconfigured(message: str) -> Response:
+    return PlainTextResponse(message, status_code=503, headers={"Cache-Control": "no-store"})
 
 
 def _vernissage_public_shell(site_dir: Path, url_path: str) -> Path | None:
@@ -563,6 +643,9 @@ async def serve(request: Request, url_path: str) -> Response:
 
     if site == "vernissage" and url_path == "sitemap.xml" and (sitemap := await _vernissage_dynamic_sitemap(request)):
         return sitemap
+
+    if site == "vernissage" and (association := _vernissage_app_link_association(url_path)):
+        return association
 
     # 브라우저가 <link rel="icon"> 없이도 루트에서 찾는 파일들
     if url_path in ROOT_ICON_FALLBACKS:

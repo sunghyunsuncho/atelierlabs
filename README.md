@@ -55,6 +55,7 @@ URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 - `/favicon.ico`, `/apple-touch-icon.png` → `assets/favicon.png`, `assets/apple-touch-icon.png`
 - `/shared/...` → `sites/shared/`의 모든 사이트 공통 자산
 - `/app-ads.txt` → AdMob 앱 인증용 정적 파일. Vernissage 및 Atelier Labs 루트 도메인에서 제공한다.
+- `/.well-known/assetlinks.json`, `/.well-known/apple-app-site-association` → Vernissage Android App Links·iOS Universal Links 검증 선언. 경로 목록은 Vernissage `mobile/app.json`의 intentFilters와 맞춘다. 앱에는 상세 화면만 있으므로 상세(`/exhibitions/<id>`, `/en/…`, `/ja/…`)만 앱으로 열고 목록은 웹에 남긴다. 언어 접두사는 앱의 `+native-intent.tsx`가 떼어낸다. Android 지문·Apple Team ID가 없거나 형식이 틀리면 503으로 실패한다.
 - 없는 경로 → `<lang>/404.html`, 없으면 `404.html`, 그것도 없으면 일반 텍스트 404
 
 ## 다국어
@@ -146,6 +147,8 @@ uv run ruff check . && uv run ruff format --check .
 |---|---|---|
 | `ROOT_DOMAIN` | `atelierlabs.co.kr` | 서브도메인 판별 기준 |
 | `DEFAULT_SITE` | `atelierlabs` | 우리 도메인이 아닌 Host(`localhost`, `*.up.railway.app`)에 보여줄 사이트 |
+| `ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS` | — | 쉼표로 구분한 Vernissage **Google Play 앱 서명** SHA-256 지문(`AB:CD:…` 콜론 구분 32바이트). `vernissage.atelierlabs.co.kr/.well-known/assetlinks.json`에 사용하며, 누락되거나 형식이 틀리면 Android 검증 파일은 503이다. |
+| `APPLE_APP_LINK_TEAM_ID` | `3BQ7Y687R9` | Vernissage Universal Links의 Apple Team ID(영문 대문자·숫자 10자리). 형식이 틀리면 iOS 검증 파일은 503이다. |
 
 ## Vernissage 웹 이전
 
