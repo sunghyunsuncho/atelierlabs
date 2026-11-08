@@ -152,7 +152,8 @@ uv run ruff check . && uv run ruff format --check .
 
 ## Vernissage 웹 이전
 
-vernissage 웹페이지는 `www.vernissage.kr`에서 `vernissage.atelierlabs.co.kr`로 옮기는 중이다.
+vernissage 웹페이지는 `vernissage.atelierlabs.co.kr`으로 이전을 완료했다. 기존 `www.vernissage.kr` 주소는
+새 주소로 리다이렉트되며, 앱 링크 검증과 새 공유 링크는 새 주소만 사용한다.
 vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는 API만 남기고, 화면은 모두 이 리포로 온다.
 약관·개인정보 처리방침의 정식 주소도 `vernissage.atelierlabs.co.kr/legal/…`이다.
 
@@ -163,7 +164,7 @@ vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는
 - `canonical`·`hreflang`·`og:*`·JSON-LD 주소는 `https://vernissage.atelierlabs.co.kr`
 - 공개 도슨트·전시·비엔날레·아트페어·예술취향테스트 화면은 이 리포의 정적 shell과 Vernissage 공개 API로 제공한다.
   도슨트·전시·아트이벤트의 상세 페이지는 같은 API 데이터로 서버 HTML과 검색 메타데이터를 먼저 제공하고,
-  `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 소개 페이지는 `https://www.vernissage.kr/about`을 계속 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
+  `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 소개 페이지는 `https://vernissage.atelierlabs.co.kr/about`을 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
   AdSense 자리표시는 두지 않는다.
 - 웹 페이지가 없는 앱 전용 상세(`/museums`, `/artworks`, `/artists`, `/art-concepts`, `/art-figures` 아래, 언어별)는 앱이 없는 사람에게 `<lang>/get-app.html` 설치 안내를 보여준다. `assets/get-app.js` 동작: 카카오톡·인스타그램 등 인앱 브라우저와 Android는 먼저 앱을 직접 열고(Android `intent://`, iOS `vernissage://`), 1.6초 안에 앱이 열리지 않으면 스토어로 보낸다. iOS Safari는 앱이 있으면 Universal Links가 이미 열었을 것이므로 바로 App Store로 보낸다. 데스크톱은 스토어 배지만 보여준다.
 - 개인정보 처리방침 제11조에서 웹사이트 AdSense·쿠키 고지를 뺐다(웹 광고는 게재하지 않음). 앱의 AdMob 고지는 남아 있다.
