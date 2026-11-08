@@ -45,8 +45,17 @@ img { max-width: 100%; }
 .logo-local { padding-left: 10px; border-left: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; }
 @media (max-width: 760px) { .site-logo:has(.logo-local) { margin-right: 6px; } }
 @media (max-width: 480px) {
-  .site-logo:has(.logo-local) { flex-direction: column; align-items: flex-start; gap: 4px; margin-right: 0; }
-  .logo-local { padding-left: 1px; border-left: 0; font-size: 10.5px; line-height: 1; }
+  /* 휴대폰에서도 현지어 이름은 로고 오른쪽에 둔다 */
+  .site-logo { gap: 8px; }
+  .site-logo:has(.logo-local) { margin-right: 0; }
+  .logo-local { padding-left: 8px; }
+}
+@media (max-width: 374px) {
+  /* 아주 좁은 휴대폰: 로고·현지어 이름을 줄이고 언어 버튼은 지구본만 남겨 한 줄에 맞춘다 */
+  .site-header .site-logo img { height: 22px; }
+  .site-logo { gap: 6px; }
+  .logo-local { padding-left: 6px; font-size: 12px; }
+  .lang-switch :is(.lang-current, .lang-chevron) { display: none; }
 }
 
 .site-logo img { height: 30px; width: auto; }
@@ -245,8 +254,8 @@ main:not(.public-main) > section > h2::before {
   .feature:nth-child(even) { padding-right: 0; }
 }
 /* 로고 크기는 atelierlabs·keepsake 헤더와 같은 단계로 줄인다 */
-@media (max-width: 760px) { .site-logo img { height: 26px; } }
-@media (max-width: 480px) { .site-logo img { height: 22px; } }
+@media (max-width: 760px) { .site-logo img { height: 28px; } }
+@media (max-width: 480px) { .site-logo img { height: 26px; } }
 @media (max-width: 760px) {
   .hero-frame img { object-position: 80% center; }
   .about, .persona-section, .taste-section, .faq-section, .featured-section { grid-template-columns: 1fr; row-gap: 28px; }
@@ -260,9 +269,9 @@ main:not(.public-main) > section > h2::before {
   .store-badge .store-name { font-size: 15px; }
   .store-badge .eyebrow { font-size: 9.5px; }
 }
-@media (max-width: 560px) {
+@media (max-width: 900px) {
+  /* 메뉴 네 개(특히 일본어)가 한 줄에 들어가지 않는 폭부터 ☰ 버튼(nav.js)으로 여닫는 드롭다운 */
   .site-header-inner { gap: 8px; }
-  /* 휴대폰: 메뉴는 ☰ 버튼(nav.js)으로 여닫는 드롭다운 */
   .nav-toggle { display: inline-flex; }
   .site-nav {
     display: none; position: absolute; top: 100%; left: 0; right: 0;
@@ -274,6 +283,8 @@ main:not(.public-main) > section > h2::before {
   .site-nav a { padding: 13px 0; font-size: 15px; border-bottom: 1px solid var(--line); }
   .site-nav a:last-child { border-bottom: 0; }
   .lang-switch { margin-left: auto; }
+}
+@media (max-width: 560px) {
   .features { grid-template-columns: 1fr; }
   .feature, .feature:nth-child(n) { padding: 24px 0 28px; }
   .feature-icon { margin-bottom: 16px; }

@@ -195,6 +195,28 @@ def test_every_homepage_loads_the_shared_hero_layout():
             assert 'href="/shared/hero-layout.css?v=' in html
 
 
+def test_nav_script_copies_stay_identical():
+    # atelierlabs와 vernissage는 같은 ☰ 메뉴 스크립트를 각자 assets/에 둔다
+    atelier = (main.SITES_DIR / "atelierlabs/assets/nav.js").read_text(encoding="utf-8")
+    vernissage = (main.SITES_DIR / "vernissage/assets/nav.js").read_text(encoding="utf-8")
+    assert atelier == vernissage
+
+
+def test_pages_with_a_header_menu_have_the_menu_button():
+    # 상단 메뉴가 있는 페이지는 좁은 화면에서 메뉴를 열 ☰ 버튼과 nav.js가 함께 있어야 한다
+    pages = [p for site in ("atelierlabs", "vernissage") for p in (main.SITES_DIR / site).rglob("*.html")]
+    checked = 0
+    for page in pages:
+        html = page.read_text(encoding="utf-8")
+        if '<nav class="site-nav"' not in html:
+            continue
+        checked += 1
+        assert 'id="site-nav"' in html, page
+        assert 'class="nav-toggle"' in html and 'aria-controls="site-nav"' in html, page
+        assert 'src="/assets/nav.js?v=' in html, page
+    assert checked >= 13
+
+
 @pytest.mark.parametrize("path", ["/../app/main.py", "/%2e%2e/app/main.py", "/assets/../../keepsake/index.html"])
 def test_path_traversal_blocked(path):
     res = get(path, "vernissage.atelierlabs.co.kr")

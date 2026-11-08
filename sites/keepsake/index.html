@@ -107,10 +107,12 @@
   .site-header .wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; max-width: 1200px; height: 64px; margin: 0 auto; padding: 0 clamp(20px, 4.4vw, 72px); }
   .logo { display: inline-flex; align-items: center; gap: 10px; line-height: 0; text-decoration: none; }
   .logo-local { padding-left: 10px; border-left: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; }
-  @media (max-width: 480px) { .logo:has(.logo-local) { flex-direction: column; align-items: flex-start; gap: 4px; } .logo-local { padding-left: 1px; border-left: 0; font-size: 10.5px; line-height: 1; } }
+  @media (max-width: 480px) { .logo { gap: 8px; } .logo-local { padding-left: 8px; } }
   .logo img { height: 30px; width: auto; }
-  @media (max-width: 760px) { .logo img { height: 26px; } }
-  @media (max-width: 480px) { .logo img { height: 22px; } }
+  @media (max-width: 760px) { .logo img { height: 28px; } }
+  @media (max-width: 480px) { .logo img { height: 26px; } }
+  /* 아주 좁은 휴대폰: 로고·현지어 이름을 줄이고 언어 버튼은 지구본만 남겨 한 줄에 맞춘다 */
+  @media (max-width: 374px) { .site-header .logo img { height: 22px; } .logo { gap: 6px; } .logo-local { padding-left: 6px; font-size: 12px; } .lang-switch :is(.lang-current, .lang-chevron) { display: none; } }
   /* 언어 선택 — 상단 바 오른쪽의 작은 버튼, 누르면 KO·EN·JA 메뉴가 열린다 (lang-menu.js) */
   .lang-switch { position: relative; flex: 0 0 auto; font-size: 12.5px; font-weight: 700; }
   .lang-switch summary { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 8px; color: var(--ink); cursor: pointer; list-style: none; user-select: none; -webkit-user-select: none; }
