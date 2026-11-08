@@ -196,7 +196,7 @@ def test_unconfigured_legal_document_apis_are_not_cached(monkeypatch, host, path
         (host, path, lang)
         for host, paths in [
             ("atelierlabs.co.kr", ["/", "/support"]),
-            ("vernissage.atelierlabs.co.kr", ["/"]),
+            ("vernissage.atelierlabs.co.kr", ["/", "/about"]),
             ("keepsake.atelierlabs.co.kr", ["/"]),
         ]
         for path in paths
