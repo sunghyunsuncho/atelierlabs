@@ -93,6 +93,20 @@ def test_vernissage_app_link_association_files(monkeypatch):
     assert detail["paths"] == [f"/{lang}{section}/?*" for lang in ("", "en/", "ja/") for section in sections]
 
 
+def test_vernissage_dynamic_sitemap_includes_localized_about_pages(monkeypatch):
+    """The dynamic sitemap replaces the static file when the API is available."""
+    monkeypatch.setattr(main, "VERNISSAGE_SITEMAP_CACHE", None)
+
+    async def public_json(_request, _endpoint, _language):
+        return {"items": [], "has_next": False}, 200
+
+    monkeypatch.setattr(main, "_vernissage_public_json", public_json)
+    response = get("/sitemap.xml", "vernissage.atelierlabs.co.kr")
+    assert response.status_code == 200
+    for path in ("about", "en/about", "ja/about"):
+        assert f"https://vernissage.atelierlabs.co.kr/{path}" in response.text
+
+
 @pytest.mark.parametrize(
     ("path", "lang", "marker"),
     [
