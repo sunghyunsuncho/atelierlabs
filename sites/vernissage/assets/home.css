@@ -248,7 +248,6 @@ main:not(.public-main) > section > h2::before {
 @media (max-width: 760px) { .site-logo img { height: 26px; } }
 @media (max-width: 480px) { .site-logo img { height: 22px; } }
 @media (max-width: 760px) {
-  .hero { min-height: max(570px, 132vw); }
   .hero-frame img { object-position: 80% center; }
   .about, .persona-section, .taste-section, .faq-section, .featured-section { grid-template-columns: 1fr; row-gap: 28px; }
   .about { row-gap: 0; }

@@ -1,15 +1,47 @@
-/* Desktop hero layout shared by Atelier Labs, Vernissage, and Keepsake. */
+/* Hero layout shared by Atelier Labs, Vernissage, and Keepsake. */
+
+/* Mobile: one short photo band, the same height on all three sites.
+   Sizes are fixed (not vw-based) so the icon, text and buttons land in the same
+   place on every site and phone width; the band only grows if text would overflow. */
+@media (max-width: 760px) {
+  :is(.hero, main.hero-layout) { min-height: 440px; }
+  main.hero-layout { flex: 0 0 auto; }
+
+  :is(.hero-copy, .tagline-row) {
+    padding-top: 32px;
+    padding-bottom: 36px;
+  }
+
+  .hero-mark { width: 56px; margin-bottom: 20px; }
+  .hero-reading { margin-bottom: 6px; font-size: 14px; }
+  :is(.hero-copy, .tagline-row) :is(h1.hero-title, .hero-title) { margin-bottom: 16px; font-size: 50px; }
+  .hero-tagline { margin-bottom: 10px; font-size: 20px; }
+  /* Description always reserves two lines so the buttons sit at the same height. */
+  :is(.hero-copy, .tagline-row) .lead { min-height: 3.4em; font-size: 15px; }
+  :is(.hero-copy, .tagline-row) .cta { margin-top: 24px; }
+}
+
+/* Very narrow phones: descriptions can wrap to three lines, so reserve three
+   everywhere and make the band tall enough to hold them. */
+@media (max-width: 374px) {
+  :is(.hero, main.hero-layout) { min-height: 456px; }
+  :is(.hero-copy, .tagline-row) .lead { min-height: 5.1em; }
+}
+
+/* Desktop */
 @media (min-width: 761px) {
   :is(.hero, main.hero-layout) {
     height: clamp(540px, 45vw, 620px);
     min-height: 0;
-    align-items: center;
+    /* Top-anchored, not centred: centring moved the icon and title depending on
+       how much sat below them (buttons or not, one- or three-line description). */
+    align-items: flex-start;
   }
 
   main.hero-layout { flex: 0 0 auto; }
 
   :is(.hero-copy, .tagline-row) {
-    padding-top: clamp(36px, 4vw, 56px);
+    padding-top: clamp(88px, 7vw, 100px);
     padding-bottom: clamp(36px, 3vw, 48px);
   }
 
@@ -18,9 +50,11 @@
   :is(.hero-copy, .tagline-row) :is(h1.hero-title, .hero-title) { margin-bottom: 12px; font-size: clamp(56px, 7vw, 96px); }
   .hero-tagline { margin-bottom: 8px; font-size: clamp(20px, 2vw, 28px); }
 
-  :is(.hero-copy, .tagline-row) .lead { min-height: 0; }
+  /* Description always reserves two lines so the buttons sit at the same height. */
+  :is(.hero-copy, .tagline-row) .lead { min-height: 3.4em; }
   :is(.hero-copy, .tagline-row) .cta { margin-top: 16px; }
-  :is(.hero-copy, .tagline-row) .store-badge { padding: 10px 18px 10px 14px; }
+  /* Keepsake's badges carry a 1px border; give Vernissage's the same so both are the same height. */
+  :is(.hero-copy, .tagline-row) .store-badge { padding: 9px 17px 9px 13px; border: 1px solid #000; }
   :is(.hero-copy, .tagline-row) .store-badge svg { width: 24px; height: 24px; }
   :is(.hero-copy, .tagline-row) .store-badge .store-name { font-size: 16px; }
 }

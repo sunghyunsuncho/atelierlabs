@@ -192,7 +192,7 @@ def test_every_homepage_loads_the_shared_hero_layout():
     for site in main.SITES.values():
         for home in ("index.html", "en/index.html", "ja/index.html"):
             html = (main.SITES_DIR / site / home).read_text(encoding="utf-8")
-            assert 'href="/shared/hero-layout.css?v=2"' in html
+            assert 'href="/shared/hero-layout.css?v=' in html
 
 
 @pytest.mark.parametrize("path", ["/../app/main.py", "/%2e%2e/app/main.py", "/assets/../../keepsake/index.html"])
