@@ -1,0 +1,10 @@
+/* 앱 설치 안내(get-app.html) — 앱에만 있는 화면 링크를 웹에서 열었을 때 */
+.get-app { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 720px; }
+.get-app-icon { width: 88px; height: 88px; border-radius: 20px; margin-bottom: 28px; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); }
+.get-app h1 { font-size: clamp(28px, 4vw, 44px); word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; }
+.get-app-lead { margin: 0; max-width: 34em; color: var(--muted); font-size: 16px; line-height: 1.7; word-break: keep-all; }
+.get-app .cta { justify-content: center; margin-top: 36px; }
+/* 휴대폰에서만 get-app.js가 보여준다. hidden 속성이 display 규칙에 덮이지 않게 한다. */
+.get-app-open { margin-top: 32px; padding: 15px 36px; border: 0; background: var(--ink); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.get-app-open[hidden] { display: none; }
+.get-app-open + .cta { margin-top: 16px; }

@@ -68,6 +68,8 @@ VERNISSAGE_APP_LINK_PREFIXES = (
     "art-events",
     "docent/notes",
 )
+# 웹에 페이지가 없고 앱에만 있는 상세 화면. 앱이 없는 사람에게는 설치 안내(get-app)를 보여준다.
+VERNISSAGE_APP_ONLY_PREFIXES = ("museums", "artworks", "artists", "art-concepts", "art-figures")
 # keytool/Play Console 형식: 콜론으로 구분한 32바이트 16진수(대문자).
 SHA256_CERT_FINGERPRINT = re.compile(r"(?:[0-9A-F]{2}:){31}[0-9A-F]{2}")
 APPLE_TEAM_ID = re.compile(r"[A-Z0-9]{10}")
@@ -242,17 +244,32 @@ def _misconfigured(message: str) -> Response:
     return PlainTextResponse(message, status_code=503, headers={"Cache-Control": "no-store"})
 
 
+def _split_lang(url_path: str) -> tuple[str, str]:
+    """``en/foo`` -> (``en``, ``foo``), ``foo`` -> (``""``, ``foo``)."""
+    lang, _, rest = url_path.partition("/")
+    return (lang, rest) if lang in LANGS else ("", url_path)
+
+
+def _under_prefix(rel: str, prefixes: tuple[str, ...]) -> bool:
+    return any(rel == prefix or rel.startswith(prefix + "/") for prefix in prefixes)
+
+
 def _vernissage_public_shell(site_dir: Path, url_path: str) -> Path | None:
     """공개 데이터 화면 경로면 그 언어의 client shell(/public/index.html, /<lang>/public/index.html)."""
-    lang, _, rest = url_path.partition("/")
-    lang_dir = lang if lang in LANGS else ""
-    rel = rest if lang_dir else url_path
-    if rel != "art-taste-test" and not any(
-        rel == prefix or rel.startswith(prefix + "/") for prefix in VERNISSAGE_PUBLIC_WEB_PREFIXES
-    ):
+    lang_dir, rel = _split_lang(url_path)
+    if rel != "art-taste-test" and not _under_prefix(rel, VERNISSAGE_PUBLIC_WEB_PREFIXES):
         return None
     shell = site_dir / lang_dir / "public" / "index.html"
     return shell if shell.is_file() else None
+
+
+def _vernissage_get_app_page(site_dir: Path, url_path: str) -> Path | None:
+    """앱에만 있는 화면(작가·작품·미술관 등) 링크를 앱 없이 열면 그 언어의 설치 안내 페이지."""
+    lang_dir, rel = _split_lang(url_path)
+    if not _under_prefix(rel, VERNISSAGE_APP_ONLY_PREFIXES):
+        return None
+    page = site_dir / lang_dir / "get-app.html"
+    return page if page.is_file() else None
 
 
 def _vernissage_api_headers(request: Request) -> dict[str, str]:
@@ -668,7 +685,11 @@ async def serve(request: Request, url_path: str) -> Response:
 
     path = resolve_file(site_dir, url_path)
     if path is None:
-        shell = _vernissage_public_shell(site_dir, url_path) if site == "vernissage" else None
+        shell = (
+            _vernissage_public_shell(site_dir, url_path) or _vernissage_get_app_page(site_dir, url_path)
+            if site == "vernissage"
+            else None
+        )
         if shell is None:
             return _not_found(site_dir, url_path, _local_origin_rewriter(request))
         path = shell
