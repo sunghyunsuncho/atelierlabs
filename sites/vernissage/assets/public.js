@@ -79,7 +79,7 @@
         tipsTitle: 'A few tips', tips: ['Go with what draws you in, not what you know.', 'Picturing a familiar scene makes it easier.', 'Don’t overthink it — trust your first impression.'],
         note: 'No sign-in needed', start: n => `Start the ${n} questions`,
         referenceTitle: 'What research is this based on?',
-        referenceText: 'This isn’t a psychological diagnosis, and it won’t box you into a personality type. We took dimensions that the psychology of aesthetics often uses to study how people respond to art — style of expression, complexity, emotion, color, and familiarity versus novelty — and turned them into everyday choices.',
+        referenceText: 'This isn’t a psychological diagnosis, and it won’t box you into a personality type. It draws on dimensions that the psychology of aesthetics often uses to study how people respond to art — style of expression, complexity, emotion, color, and familiarity versus novelty — and turns them into everyday choices.',
         helper: 'Pick the one that draws you in more.', scoring: 'Reading your taste…', recommendations: 'Art you might love', retake: 'Take it again',
       },
     },
