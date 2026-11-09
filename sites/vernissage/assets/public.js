@@ -28,7 +28,7 @@
       mapHintPins: '핀을 누르면 해당 미술관의 진행 중인 전시를 볼 수 있어요.',
       mapHintAll: '나라를 고르면 그 나라 미술관의 위치를 핀으로 볼 수 있어요.',
       mapHintNone: '이 나라에는 아직 지도에 표시할 미술관 위치가 없어요.',
-      backNotes: '← 도슨트 목록', notesTitle: '도슨트', notesIntro: '작품과 장소에 얽힌 이야기를 천천히 읽어보세요.', noNotes: '표시할 도슨트 글이 없습니다.',
+      backNotes: '← 도슨트 목록', notesTitle: '도슨트', notesIntro: '작품과 장소에 얽힌 이야기를 천천히 읽어보세요.', noNotes: '표시할 도슨트 글이 없습니다.', cardLoading: '작품 정보를 불러오는 중이에요.', cardUntitled: '제목 없는 작품', cardUnavailable: '작품 보기',
       backEvents: '← 비엔날레 · 아트페어 목록', eventNoDesc: '행사 상세 정보는 준비 중입니다.', eventSite: '행사 공식 홈페이지 ↗',
       tabCalendar: '연간 캘린더', tabList: '진행 중 · 예정',
       eventsTitle: '비엔날레 · 아트페어', eventsIntro: '세계 곳곳에서 열리는 예술 행사를 살펴보세요.',
@@ -62,7 +62,7 @@
       mapHintPins: 'Tap a pin to see what’s on at that museum.',
       mapHintAll: 'Pick a country to see its museums pinned on the map.',
       mapHintNone: 'We don’t have museum locations to show for this country yet.',
-      backNotes: '← All docent stories', notesTitle: 'Docent', notesIntro: 'Slow down and enjoy the stories behind the art and the places it lives.', noNotes: 'No docent stories to show yet.',
+      backNotes: '← All docent stories', notesTitle: 'Docent', notesIntro: 'Slow down and enjoy the stories behind the art and the places it lives.', noNotes: 'No docent stories to show yet.', cardLoading: 'Loading artwork…', cardUntitled: 'Untitled artwork', cardUnavailable: 'View artwork',
       backEvents: '← All biennials & art fairs', eventNoDesc: 'More details about this event are coming soon.', eventSite: 'Official event website ↗',
       tabCalendar: 'Yearly calendar', tabList: 'On now & upcoming',
       eventsTitle: 'Biennials & Art Fairs', eventsIntro: 'See what’s happening in the art world, wherever it’s happening.',
@@ -97,7 +97,7 @@
       mapHintPins: 'ピンをタップすると、その美術館で開催中の展覧会を見られます。',
       mapHintAll: '国を選ぶと、その国の美術館の場所がピンで表示されます。',
       mapHintNone: 'この国には、まだ地図に表示できる美術館がありません。',
-      backNotes: '← ドーセント一覧', notesTitle: 'ドーセント', notesIntro: '作品や場所にまつわる物語を、ゆっくり味わってみてください。', noNotes: '表示できるドーセント記事はありません。',
+      backNotes: '← ドーセント一覧', notesTitle: 'ドーセント', notesIntro: '作品や場所にまつわる物語を、ゆっくり味わってみてください。', noNotes: '表示できるドーセント記事はありません。', cardLoading: '作品情報を読み込んでいます。', cardUntitled: '無題の作品', cardUnavailable: '作品を見る',
       backEvents: '← ビエンナーレ・アートフェア一覧', eventNoDesc: 'このイベントの詳しい情報は準備中です。', eventSite: 'イベントの公式サイト ↗',
       tabCalendar: '年間カレンダー', tabList: '開催中・開催予定',
       eventsTitle: 'ビエンナーレ・アートフェア', eventsIntro: '世界各地で開かれるアートイベントをチェックしましょう。',
@@ -132,6 +132,116 @@
     if (!response.ok) throw new Error(`API ${response.status}`);
     return response.json();
   };
+  const CARD_PATHS = {
+    artwork: 'artworks', artist: 'artists', art_concept: 'art-concepts', art_figure: 'art-figures',
+    museum: 'museums', exhibition: 'exhibitions', art_event: 'art-events',
+  };
+  const CARD_RESPONSE_KEYS = {
+    artwork: 'artwork', artist: 'artist', art_concept: 'concept', art_figure: 'figure',
+    museum: 'museum', exhibition: 'exhibition', art_event: 'event',
+  };
+  // 도슨트 원문은 편집기에서 Markdown 이미지와 참조 카드를 함께 저장한다. 이전에는
+  // 원문 전체를 escape해서 이미지 문법과 [[cards:...]]가 그대로 노출됐다. HTML을 신뢰하지
+  // 않고, 여기서 지원하는 두 문법만 HTML로 바꾼다.
+  const docentText = value => escape(value)
+    .replace(/\*\*([^*\n](?:[^*\n]|\*(?!\*))*)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br />');
+  const docentContent = (content = '') => {
+    const token = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\[cards:((?:(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event):[0-9]+)(?:,(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event):[0-9]+)*)\]\]|\[\[image:(https?:\/\/[^\]|]+)(?:\|([^\]]*))?\]\]/g;
+    let cursor = 0; let match; const parts = [];
+    const text = String(content);
+    const addText = value => {
+      if (!value) return;
+      parts.push(docentText(value));
+    };
+    while ((match = token.exec(text))) {
+      addText(text.slice(cursor, match.index));
+      if (match[1] !== undefined) {
+        parts.push(`<figure class="docent-image"><img src="${escape(match[2])}" alt="${escape(match[1])}" loading="lazy" /></figure>`);
+      } else if (match[3] !== undefined) {
+        const cards = match[3].split(',').map(reference => {
+          const [kind, id] = reference.split(':');
+          return `<a class="docent-card" data-docent-card-kind="${kind}" data-docent-card-id="${id}" href="${BASE}/${CARD_PATHS[kind]}/${id}"><span class="docent-card-image" aria-hidden="true"></span><span class="docent-card-copy">${escape(T.cardLoading)}</span></a>`;
+        });
+        parts.push(cards.length > 1 ? `<div class="docent-card-grid" data-count="${cards.length}">${cards.join('')}</div>` : cards[0]);
+      } else {
+        const caption = match[5] || '';
+        parts.push(`<figure class="docent-image"><img src="${escape(match[4])}" alt="${escape(caption)}" loading="lazy" />${caption ? `<figcaption>${escape(caption)}</figcaption>` : ''}</figure>`);
+      }
+      cursor = token.lastIndex;
+    }
+    addText(text.slice(cursor));
+    // 줄바꿈만 사이에 둔 이미지들은 하나의 사진 묶음으로 보고 2~3열로 배치한다.
+    return parts.join('').replace(/(?:<figure class="docent-image">(?:(?!<\/figure>)[\s\S])*<\/figure>(?:<br \/>)*){2,}/g, group => {
+      const images = group.match(/<figure class="docent-image">(?:(?!<\/figure>)[\s\S])*<\/figure>/g) || [];
+      return `<div class="docent-image-grid" data-count="${images.length}">${images.join('')}</div>`;
+    });
+  };
+  const docentCardRequests = new Map();
+  const docentCardQueue = [];
+  let activeDocentCardRequests = 0;
+  const runDocentCardRequest = task => new Promise((resolve, reject) => {
+    docentCardQueue.push(async () => {
+      activeDocentCardRequests += 1;
+      try { resolve(await task()); } catch (error) { reject(error); }
+      finally {
+        activeDocentCardRequests -= 1;
+        const next = docentCardQueue.shift();
+        if (next) next();
+      }
+    });
+    if (activeDocentCardRequests < 4) {
+      const next = docentCardQueue.shift();
+      if (next) next();
+    }
+  });
+  const docentCardData = (kind, id) => {
+    const key = `${kind}:${id}`;
+    if (!docentCardRequests.has(key)) {
+      const request = runDocentCardRequest(() => get(`${CARD_PATHS[kind]}/${id}`)).catch(error => {
+        docentCardRequests.delete(key);
+        throw error;
+      });
+      docentCardRequests.set(key, request);
+    }
+    return docentCardRequests.get(key);
+  };
+  // 작품 데이터는 수집처에 따라 대표 이미지가 여러 필드·배열 안에 들어올 수 있다.
+  // 카드가 비어 보이지 않도록 URL 후보를 한 곳에서 정규화한다.
+  const imageUrl = value => {
+    if (typeof value === 'string') return /^https?:\/\//i.test(value) ? value : '';
+    if (Array.isArray(value)) return value.map(imageUrl).find(Boolean) || '';
+    if (!value || typeof value !== 'object') return '';
+    return imageUrl(value.url || value.src || value.image_url || value.thumbnail_url || value.original_url || value.medium_url || value.large_url || value.file_url || value.source_url);
+  };
+  const artworkImage = item => {
+    if (!item || typeof item !== 'object') return '';
+    const candidates = [
+      item.image_url, item.thumbnail_url, item.image, item.thumbnail, item.cover_image, item.primary_image,
+      item.cover_url, item.photo_url, item.primary_image_url, item.imageUrl, item.thumbnailUrl,
+      item.image_urls, item.images, item.photos, item.attachments,
+    ];
+    return candidates.map(imageUrl).find(Boolean) || '';
+  };
+  const hydrateDocentCards = root => root.querySelectorAll('[data-docent-card-id]').forEach(async card => {
+    const { docentCardKind: kind, docentCardId: id } = card.dataset;
+    try {
+      const data = await docentCardData(kind, id);
+      const responseKey = CARD_RESPONSE_KEYS[kind];
+      const item = data[responseKey] || data[kind] || data.item
+        || data.data?.[responseKey] || data.data?.[kind] || data.data || data;
+      const image = artworkImage(item);
+      const title = item.title || item.name || item.display_name || item.display_title || T.cardUntitled;
+      card.querySelector('.docent-card-copy').textContent = title;
+      if (image) {
+        const imageSlot = card.querySelector('.docent-card-image');
+        imageSlot.innerHTML = `<img src="${escape(image)}" alt="" loading="lazy" />`;
+      }
+    } catch (_) {
+      // 카드 데이터를 가져오지 못해도 편집기 내부 토큰을 독자에게 노출하지 않는다.
+      card.querySelector('.docent-card-copy').textContent = T.cardUnavailable;
+    }
+  });
   // 진행 중·예정 목록은 다음 페이지가 있으면 이어 받아 모두 보여 준다(지난 목록은 서버가 최근 50건 한 페이지만 준다).
   const getAll = async (endpoint, params) => {
     const first = await get(`${endpoint}?${params}`); let last = first;
@@ -250,7 +360,8 @@
     if (id) {
       const data = await get(`docent/notes/${id}`); const note = data.note;
       document.title = `${note.title} | Vernissage`;
-      app.innerHTML = `<article class="detail"><a class="back" href="${BASE}/docent/notes">${T.backNotes}</a><h1>${escape(note.title)}</h1><p class="meta">${date(note.published_at)}</p>${note.thumbnail_url ? `<img class="detail-image" src="${escape(note.thumbnail_url)}" alt="" />` : ''}<div class="detail-text">${escape(note.content || note.excerpt || '')}</div></article>`;
+      app.innerHTML = `<article class="detail"><a class="back" href="${BASE}/docent/notes">${T.backNotes}</a><h1>${escape(note.title)}</h1><p class="meta">${date(note.published_at)}</p>${note.thumbnail_url ? `<img class="detail-image" src="${escape(note.thumbnail_url)}" alt="" />` : ''}<div class="detail-text docent-content">${docentContent(note.content || note.excerpt || '')}</div></article>`;
+      hydrateDocentCards(app);
       return;
     }
     const data = await get('docent/notes');

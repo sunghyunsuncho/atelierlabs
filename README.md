@@ -170,6 +170,7 @@ vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는
   도슨트·전시·아트이벤트의 상세 페이지는 같은 API 데이터로 서버 HTML과 검색 메타데이터를 먼저 제공하고,
   `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 소개 페이지는 `https://vernissage.atelierlabs.co.kr/about`을 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
   AdSense 자리표시는 두지 않는다.
+- 도슨트 본문은 일반 텍스트뿐 아니라 강조 문장, 출처를 포함한 이미지, 작품·작가·미술 개념 등의 참조 카드를 표시한다. 여러 참조·이미지는 화면 크기에 맞춰 그리드로 묶어 보여 준다.
 - 웹 페이지가 없는 앱 전용 상세(`/museums`, `/artworks`, `/artists`, `/art-concepts`, `/art-figures` 아래, 언어별)는 앱이 없는 사람에게 `<lang>/get-app.html` 설치 안내를 보여준다. `assets/get-app.js` 동작: 카카오톡·인스타그램 등 인앱 브라우저와 Android는 먼저 앱을 직접 열고(Android `intent://`, iOS `vernissage://`), 1.6초 안에 앱이 열리지 않으면 스토어로 보낸다. iOS Safari는 앱이 있으면 Universal Links가 이미 열었을 것이므로 바로 App Store로 보낸다. 데스크톱은 스토어 배지만 보여준다.
 - 개인정보 처리방침 제11조에서 웹사이트 AdSense·쿠키 고지를 뺐다(웹 광고는 게재하지 않음). 앱의 AdMob 고지는 남아 있다.
 
@@ -210,6 +211,9 @@ atelierlabs 서비스에 다음을 설정한다.
 |---|---|
 | `VERNISSAGE_API_BASE_URL` | `https://<vernissage 백엔드의 public domain>` |
 | `VERNISSAGE_PUBLIC_WEB_API_TOKEN` | 백엔드의 `PUBLIC_WEB_API_TOKEN`과 같은 랜덤 값 |
+| `VERNISSAGE_PUBLIC_API_CACHE_SECONDS` | 공개 API 응답의 프로세스 내 캐시 시간(초, 기본 `300`) |
+| `VERNISSAGE_PUBLIC_API_REQUESTS_PER_MINUTE` | 방문자 IP별 공개 API 최대 요청 수(기본 `120`) |
+| `VERNISSAGE_DETAIL_REQUESTS_PER_MINUTE` | 방문자 IP별 공개 상세 페이지 최대 요청 수(기본 `60`) |
 
 Vernissage 백엔드에도 `PUBLIC_WEB_API_TOKEN`을 같은 값으로 설정한다. 호출은 사이트 서버에서
 백엔드로만 나가므로 이 구성에도 백엔드 CORS 추가는 필요 없다. API 공개 도메인은 외부에서

@@ -109,6 +109,25 @@ ASSET_CACHE = "public, max-age=86400"
 VERNISSAGE_SITEMAP_CACHE: tuple[float, str] | None = None
 
 
+def _env_int(name: str, default: int, minimum: int = 0) -> int:
+    """잘못된 운영 환경 변수 하나가 앱 시작 전체를 막지 않게 한다."""
+    try:
+        return max(minimum, int(os.environ.get(name, default)))
+    except ValueError:
+        return default
+
+
+# 공개 API는 검색 엔진·링크 미리보기·카드 렌더링이 같은 데이터를 반복 요청한다. 응답을
+# 짧게 공유해 원본 API와 이미지 메타데이터 조회가 요청 수만큼 늘지 않게 한다.
+VERNISSAGE_PUBLIC_API_CACHE_SECONDS = _env_int("VERNISSAGE_PUBLIC_API_CACHE_SECONDS", 300)
+VERNISSAGE_PUBLIC_API_REQUESTS_PER_MINUTE = _env_int("VERNISSAGE_PUBLIC_API_REQUESTS_PER_MINUTE", 120, 1)
+VERNISSAGE_DETAIL_REQUESTS_PER_MINUTE = _env_int("VERNISSAGE_DETAIL_REQUESTS_PER_MINUTE", 60, 1)
+PUBLIC_API_CACHE_MAX_ENTRIES = 256
+PUBLIC_API_CACHE_MAX_BYTES = 1_000_000
+PUBLIC_API_RESPONSE_CACHE: dict[tuple[str, str, str], tuple[float, bytes, int, dict[str, str]]] = {}
+REQUEST_WINDOWS: dict[tuple[str, str], tuple[float, int]] = {}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 공개 API·법률 문서는 요청마다 연결을 새로 열지 않고 앱 수명 동안 하나의
@@ -273,12 +292,67 @@ def _vernissage_get_app_page(site_dir: Path, url_path: str) -> Path | None:
 
 
 def _vernissage_api_headers(request: Request) -> dict[str, str]:
-    """Vernissage API는 X-App-Language(ko/en/ja)로 응답 언어를 정한다. 아는 값만 넘긴다."""
-    headers = {"Accept": request.headers.get("accept", "application/json")}
+    """공개 JSON API에 필요한 고정 Accept·안전한 언어 헤더만 원본으로 전달한다."""
+    headers = {"Accept": "application/json"}
     lang = request.headers.get("x-app-language", "").strip().lower()
     if lang in ("ko", *LANGS):
         headers["X-App-Language"] = lang
     return headers
+
+
+def _client_ip(request: Request) -> str:
+    """Uvicorn이 신뢰 프록시 헤더를 처리한 뒤의 연결 IP를 사용한다."""
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit(request: Request, scope: str, maximum: int) -> Response | None:
+    """인스턴스 단위의 고정 윈도우 제한. CDN/WAF가 없는 경우의 원본 API 안전망이다."""
+    now = time.monotonic()
+    key = (scope, _client_ip(request))
+    started, count = REQUEST_WINDOWS.get(key, (now, 0))
+    if now - started >= 60:
+        started, count = now, 0
+    if count >= maximum:
+        return PlainTextResponse(
+            "Too Many Requests", status_code=429, headers={"Cache-Control": "no-store", "Retry-After": "60"}
+        )
+    REQUEST_WINDOWS[key] = (started, count + 1)
+    # IP를 바꿔가며 요청해도 메모리가 끝없이 자라지 않도록 지난 윈도우를 정리한다.
+    if len(REQUEST_WINDOWS) > 2048:
+        active = {window_key: value for window_key, value in REQUEST_WINDOWS.items() if now - value[0] < 60}
+        REQUEST_WINDOWS.clear()
+        REQUEST_WINDOWS.update(active)
+        while len(REQUEST_WINDOWS) > 2048:
+            REQUEST_WINDOWS.pop(next(iter(REQUEST_WINDOWS)))
+    return None
+
+
+def _cache_get(key: tuple[str, str, str]) -> tuple[bytes, int, dict[str, str]] | None:
+    cached = PUBLIC_API_RESPONSE_CACHE.get(key)
+    if not cached or time.monotonic() - cached[0] >= VERNISSAGE_PUBLIC_API_CACHE_SECONDS:
+        PUBLIC_API_RESPONSE_CACHE.pop(key, None)
+        return None
+    # dict 삽입 순서를 최근 사용 순서로 유지해 용량 초과 시 가장 오래 안 쓰인 항목을 버린다.
+    PUBLIC_API_RESPONSE_CACHE.pop(key)
+    PUBLIC_API_RESPONSE_CACHE[key] = cached
+    _, content, status, headers = cached
+    return content, status, headers.copy()
+
+
+def _cache_put(key: tuple[str, str, str], content: bytes, status: int, headers: dict[str, str]) -> None:
+    """작고 cacheable한 성공 응답만 제한된 LRU 캐시에 보관한다."""
+    if status != 200 or not VERNISSAGE_PUBLIC_API_CACHE_SECONDS or len(content) > PUBLIC_API_CACHE_MAX_BYTES:
+        return
+    if "no-store" in headers.get("cache-control", "").lower():
+        return
+    now = time.monotonic()
+    for stale_key, stale in tuple(PUBLIC_API_RESPONSE_CACHE.items()):
+        if now - stale[0] >= VERNISSAGE_PUBLIC_API_CACHE_SECONDS:
+            PUBLIC_API_RESPONSE_CACHE.pop(stale_key)
+    PUBLIC_API_RESPONSE_CACHE.pop(key, None)
+    while len(PUBLIC_API_RESPONSE_CACHE) >= PUBLIC_API_CACHE_MAX_ENTRIES:
+        PUBLIC_API_RESPONSE_CACHE.pop(next(iter(PUBLIC_API_RESPONSE_CACHE)))
+    PUBLIC_API_RESPONSE_CACHE[key] = (now, content, status, headers.copy())
 
 
 def _is_safe_api_path(api_path: str) -> bool:
@@ -376,24 +450,127 @@ async def _vernissage_public_json(request: Request, endpoint: str, language: str
     """공개 API에서 SEO 문서용 데이터만 서버에서 가져온다."""
     if not VERNISSAGE_API_BASE_URL:
         return None, 503
+    endpoint_path, _, query = endpoint.partition("?")
+    cache_key = (endpoint_path, query, language)
+    if cached := _cache_get(cache_key):
+        try:
+            return json.loads(cached[0]), cached[1]
+        except (TypeError, ValueError):
+            PUBLIC_API_RESPONSE_CACHE.pop(cache_key, None)
     headers = {"Accept": "application/json", "X-App-Language": language}
     if VERNISSAGE_PUBLIC_WEB_API_TOKEN:
         headers["X-Public-Web-Token"] = VERNISSAGE_PUBLIC_WEB_API_TOKEN
     try:
-        response = await _upstream_get(request, httpx.URL(f"{VERNISSAGE_API_BASE_URL}/public-web/{endpoint}"), headers)
+        url = httpx.URL(f"{VERNISSAGE_API_BASE_URL}/public-web/{endpoint_path}")
+        if query:
+            url = httpx.URL(str(url), query=query.encode("utf-8"))
+        response = await _upstream_get(request, url, headers)
     except httpx.HTTPError:
         return None, 502
     if response.status_code != 200:
         return None, response.status_code
     try:
-        return response.json(), 200
+        data = response.json()
     except ValueError:
         return None, 502
+    _cache_put(
+        cache_key,
+        response.content,
+        response.status_code,
+        {
+            **{
+                name: response.headers[name]
+                for name in ("content-type", "cache-control", "etag", "last-modified")
+                if name in response.headers
+            },
+            "vary": _vary_with_language(response.headers.get("vary")),
+        },
+    )
+    return data, 200
 
 
 def _seo_text(value: object, limit: int = 160) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     return text if len(text) <= limit else f"{text[: limit - 1].rstrip()}…"
+
+
+DOCENT_CARD_PATHS = {
+    "artwork": "artworks",
+    "artist": "artists",
+    "art_concept": "art-concepts",
+    "art_figure": "art-figures",
+    "museum": "museums",
+    "exhibition": "exhibitions",
+    "art_event": "art-events",
+}
+DOCENT_CARD_KINDS = "|".join(DOCENT_CARD_PATHS)
+DOCENT_EMBED = re.compile(
+    r"!\[([^]]*)\]\((https?://[^\s)]+)\)|"
+    rf"\[\[cards:((?:(?:{DOCENT_CARD_KINDS}):\d+)(?:,(?:{DOCENT_CARD_KINDS}):\d+)*)\]\]|"
+    r"\[\[image:(https?://[^\]|]+)(?:\|([^]]*))?\]\]"
+)
+DOCENT_IMAGE_GROUP = re.compile(
+    r'(?:<figure class="docent-image">(?:(?!</figure>).)*</figure>(?:<br />)*){2,}', re.S
+)
+DOCENT_IMAGE = re.compile(r'<figure class="docent-image">(?:(?!</figure>).)*</figure>', re.S)
+DOCENT_BOLD = re.compile(r"\*\*([^*\n](?:[^*\n]|\*(?!\*))*)\*\*")
+
+
+def _docent_plain_text(content: object) -> str:
+    """검색 설명에는 편집기 문법 대신 사람이 읽을 수 있는 텍스트만 넣는다."""
+    text = DOCENT_EMBED.sub(lambda match: match.group(1) or match.group(5) or "작품", str(content or ""))
+    return DOCENT_BOLD.sub(r"\1", text)
+
+
+def _render_docent_text(text: str) -> str:
+    """HTML은 이스케이프한 뒤 지원하는 강조 문법만 안전한 태그로 바꾼다."""
+    escaped = html.escape(text)
+    return DOCENT_BOLD.sub(r"<strong>\1</strong>", escaped).replace("\n", "<br />")
+
+
+def _render_docent_content(content: object) -> str:
+    """도슨트 편집기가 저장한 이미지·작품 카드 문법만 안전한 HTML로 출력한다."""
+    text = str(content or "")
+    rendered: list[str] = []
+    cursor = 0
+    for match in DOCENT_EMBED.finditer(text):
+        rendered.append(_render_docent_text(text[cursor : match.start()]))
+        alt, image_url, cards, embedded_image_url, caption = match.groups()
+        if image_url:
+            rendered.append(
+                f'<figure class="docent-image"><img src="{html.escape(image_url, quote=True)}" '
+                f'alt="{html.escape(alt or '', quote=True)}" loading="lazy" /></figure>'
+            )
+        elif cards:
+            card_html: list[str] = []
+            for reference in cards.split(","):
+                kind, item_id = reference.split(":", 1)
+                path = DOCENT_CARD_PATHS[kind]
+                card_html.append(
+                    f'<a class="docent-card" data-docent-card-kind="{kind}" data-docent-card-id="{item_id}" '
+                    f'href="/{path}/{item_id}"><span class="docent-card-image" '
+                    'aria-hidden="true"></span>'
+                    '<span class="docent-card-copy">자세히 보기</span></a>'
+                )
+            if len(card_html) > 1:
+                cards_html = "".join(card_html)
+                rendered.append(f'<div class="docent-card-grid" data-count="{len(card_html)}">{cards_html}</div>')
+            else:
+                rendered.append(card_html[0])
+        else:
+            rendered.append(
+                f'<figure class="docent-image"><img src="{html.escape(embedded_image_url, quote=True)}" '
+                f'alt="{html.escape(caption or '', quote=True)}" loading="lazy" />'
+                f'{f"<figcaption>{html.escape(caption)}</figcaption>" if caption else ""}</figure>'
+            )
+        cursor = match.end()
+    rendered.append(_render_docent_text(text[cursor:]))
+
+    def group_images(match: re.Match[str]) -> str:
+        images = DOCENT_IMAGE.findall(match.group())
+        return f'<div class="docent-image-grid" data-count="{len(images)}">{"".join(images)}</div>'
+
+    return DOCENT_IMAGE_GROUP.sub(group_images, "".join(rendered))
 
 
 def _public_url(path: str) -> str:
@@ -450,6 +627,8 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     match = VERNISSAGE_SEO_DETAIL.fullmatch(url_path)
     if not match:
         return None
+    if limited := _rate_limit(request, "vernissage-detail", VERNISSAGE_DETAIL_REQUESTS_PER_MINUTE):
+        return limited
     language = match.group(1) or "ko"
     section, item_id = match.group(2), match.group(3)
     data, status = await _vernissage_public_json(request, f"{section}/{item_id}", language)
@@ -464,9 +643,10 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     title = _seo_text(item.get("display_title") or item.get("title") or series.get("name"), 180)
     if not title:
         return PlainTextResponse("Not Found", status_code=404)
-    description = _seo_text(
+    description_source = (
         item.get("excerpt") or item.get("description") or item.get("content") or series.get("description") or title
     )
+    description = _seo_text(_docent_plain_text(description_source) if section == "docent/notes" else description_source)
     image = item.get("thumbnail_url") or item.get("image_url")
     if section == "docent/notes":
         content = item.get("content") or item.get("excerpt") or ""
@@ -491,7 +671,11 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
             "endDate": item.get("end_date"),
             "url": _public_url(url_path),
         }
-    content_html = html.escape(str(content)).replace("\n", "<br />")
+    content_html = (
+        _render_docent_content(content)
+        if section == "docent/notes"
+        else html.escape(str(content)).replace("\n", "<br />")
+    )
     image_url = html.escape(str(image), quote=True)
     escaped_title = html.escape(title, quote=True)
     image_html = f'<img class="detail-image" src="{image_url}" alt="{escaped_title}" />' if image else ""
@@ -500,7 +684,7 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
             '<article class="detail">',
             f"<h1>{html.escape(title)}</h1>",
             image_html,
-            f'<p class="detail-text">{content_html}</p>',
+            f'<div class="detail-text{(" docent-content" if section == "docent/notes" else "")}">{content_html}</div>',
             "</article>",
         )
     )
@@ -585,15 +769,20 @@ async def vernissage_public_web_api(request: Request, api_path: str) -> Response
         return PlainTextResponse("Not Found", status_code=404)
     if not VERNISSAGE_API_BASE_URL:
         return PlainTextResponse("Vernissage API is not configured", status_code=503)
+    if limited := _rate_limit(request, "vernissage-public-api", VERNISSAGE_PUBLIC_API_REQUESTS_PER_MINUTE):
+        return limited
 
-    url = httpx.URL(
-        f"{VERNISSAGE_API_BASE_URL}/public-web/{api_path}",
-        query=request.url.query.encode("utf-8"),
-    )
+    requested_language = request.headers.get("x-app-language", "").strip().lower()
+    language = requested_language if requested_language in ("ko", *LANGS) else ""
+    cache_key = (api_path, request.url.query, language)
+    if cached := _cache_get(cache_key):
+        content, status, headers = cached
+        return Response(content=content, status_code=status, headers=headers)
+
+    url = httpx.URL(f"{VERNISSAGE_API_BASE_URL}/public-web/{api_path}", query=request.url.query.encode("utf-8"))
     headers = _vernissage_api_headers(request)
     if VERNISSAGE_PUBLIC_WEB_API_TOKEN:
         headers["X-Public-Web-Token"] = VERNISSAGE_PUBLIC_WEB_API_TOKEN
-
     try:
         upstream = await _upstream_get(request, url, headers)
     except httpx.HTTPError:
@@ -605,6 +794,8 @@ async def vernissage_public_web_api(request: Request, api_path: str) -> Response
         if name in upstream.headers
     }
     response_headers["vary"] = _vary_with_language(upstream.headers.get("vary"))
+    if upstream.status_code == 200:
+        _cache_put(cache_key, upstream.content, upstream.status_code, response_headers)
     return Response(content=upstream.content, status_code=upstream.status_code, headers=response_headers)
 
 

@@ -11,6 +11,13 @@ from app.main import app
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def clear_in_memory_protection_state():
+    """요청별 캐시와 제한기는 프로세스 상태이므로 테스트 사이에 공유하지 않는다."""
+    main.PUBLIC_API_RESPONSE_CACHE.clear()
+    main.REQUEST_WINDOWS.clear()
+
+
 def get(path: str, host: str, **kwargs):
     return client.get(path, headers={"host": host}, follow_redirects=False, **kwargs)
 
@@ -389,6 +396,51 @@ def test_vernissage_public_api_proxy(monkeypatch):
     assert res.headers["vary"] == "X-App-Language"
 
 
+def test_vernissage_public_api_caches_identical_bot_requests(monkeypatch):
+    calls = 0
+
+    async def upstream(request, url, headers):
+        nonlocal calls
+        calls += 1
+        assert headers["Accept"] == "application/json"
+        return httpx.Response(200, json={"items": []})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    first = client.get(
+        "/api/vernissage/public-web/docent/notes",
+        headers={"host": "vernissage.localhost:8000", "accept": "text/html"},
+        follow_redirects=False,
+    )
+    second = get("/api/vernissage/public-web/docent/notes", "vernissage.localhost:8000")
+    assert first.status_code == second.status_code == 200
+    assert calls == 1
+
+
+def test_vernissage_public_api_rate_limits_a_single_client(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "VERNISSAGE_PUBLIC_API_REQUESTS_PER_MINUTE", 1)
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    assert get("/api/vernissage/public-web/docent/notes", "vernissage.localhost:8000").status_code == 200
+    limited = get("/api/vernissage/public-web/exhibitions", "vernissage.localhost:8000")
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+
+
+def test_public_api_cache_evicts_the_least_recently_used_item(monkeypatch):
+    monkeypatch.setattr(main, "PUBLIC_API_CACHE_MAX_ENTRIES", 2)
+    main._cache_put(("one", "", "ko"), b'{"one": 1}', 200, {})
+    main._cache_put(("two", "", "ko"), b'{"two": 2}', 200, {})
+    assert main._cache_get(("one", "", "ko")) is not None
+    main._cache_put(("three", "", "ko"), b'{"three": 3}', 200, {})
+    assert main._cache_get(("one", "", "ko")) is not None
+    assert main._cache_get(("two", "", "ko")) is None
+    assert main._cache_get(("three", "", "ko")) is not None
+
+
 def test_vernissage_public_api_proxy_is_not_available_on_other_sites():
     assert get("/api/vernissage/public-web/home", "atelierlabs.co.kr").status_code == 404
 
@@ -419,6 +471,46 @@ def test_vernissage_public_details_are_server_rendered_for_search(monkeypatch):
     assert "A search-ready body." in res.text
     assert '"@type": "Article"' in res.text
     assert 'name="robots" content="noindex"' not in res.text
+
+
+def test_vernissage_docent_embeds_render_images_and_artwork_cards(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "note": {
+                    "title": "Embedded story",
+                    "content": (
+                        "Before ![A painting](https://images.example/painting.jpg) "
+                        "after **an important point** [[cards:artwork:2649,artist:40,art_concept:566]] "
+                        "[[image:https://images.example/archive.jpg|Archive caption]]\n"
+                        "[[image:https://images.example/archive-2.jpg|Second archive caption]]"
+                    ),
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get("/docent/notes/35", "vernissage.localhost:8000")
+    assert '<img src="https://images.example/painting.jpg" alt="A painting" loading="lazy" />' in res.text
+    assert "<strong>an important point</strong>" in res.text
+    assert 'data-docent-card-kind="artwork" data-docent-card-id="2649"' in res.text
+    assert 'data-docent-card-kind="artist" data-docent-card-id="40"' in res.text
+    assert 'href="/artists/40"' in res.text
+    assert 'data-docent-card-kind="art_concept" data-docent-card-id="566"' in res.text
+    assert 'href="/art-concepts/566"' in res.text
+    assert '<img src="https://images.example/archive.jpg" alt="Archive caption" loading="lazy" />' in res.text
+    assert '<div class="docent-image-grid" data-count="2">' in res.text
+    assert '<div class="docent-card-grid" data-count="3">' in res.text
+    assert "[[cards:artwork:2649,artist:40]]" not in res.text
+
+
+def test_vernissage_docent_card_grid_preserves_exact_card_count():
+    content = "[[cards:artist:1,artist:2,artist:3,artist:4]]"
+    rendered = main._render_docent_content(content)
+    assert '<div class="docent-card-grid" data-count="4">' in rendered
+    assert rendered.count('class="docent-card"') == 4
 
 
 def test_missing_vernissage_public_detail_is_a_real_404(monkeypatch):

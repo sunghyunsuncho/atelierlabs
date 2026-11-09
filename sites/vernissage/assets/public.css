@@ -20,6 +20,25 @@ body:has(> .public-main) > .public-main { flex: 1 0 auto; width: 100%; }
 .detail h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.22; margin: 16px 0 20px; }
 .detail-image { width: 100%; max-height: 550px; object-fit: cover; border-radius: 12px; margin: 20px 0 28px; }
 .detail-text { white-space: pre-wrap; font-size: 17px; line-height: 1.9; }
+.docent-content { white-space: normal; }
+.docent-content strong { color: var(--ink); font-weight: 760; }
+.docent-image { max-width: 580px; margin: 28px auto; }
+.docent-image img { display: block; width: 100%; max-height: 680px; object-fit: contain; background: var(--surface); border-radius: 12px; }
+.docent-image figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.docent-image-grid, .docent-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 28px 0; }
+/* 2장과 4장은 여백이 생기지 않도록 2열, 3·5·6장은 3열로 배치한다. */
+.docent-image-grid[data-count="2"], .docent-card-grid[data-count="2"], .docent-image-grid[data-count="4"], .docent-card-grid[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.docent-image-grid .docent-image { width: 100%; max-width: none; margin: 0; }
+.docent-image-grid .docent-image img { aspect-ratio: 1; max-height: none; }
+.docent-card { display: block; max-width: 580px; margin: 28px auto; overflow: hidden; border: 1px solid rgba(21, 21, 21, .12); border-radius: 14px; background: var(--paper); box-shadow: 0 4px 18px rgba(21, 21, 21, .06); color: var(--ink); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.docent-card-grid .docent-card { width: 100%; margin: 0; }
+.docent-card:hover { transform: translateY(-3px); border-color: rgba(21, 21, 21, .32); box-shadow: 0 12px 26px rgba(21, 21, 21, .12); color: var(--ink); }
+.docent-card-image { display: block; width: 100%; aspect-ratio: 4 / 3; min-height: 260px; background: #e9e7e2; overflow: hidden; }
+.docent-card-grid .docent-card-image { min-height: 0; }
+.docent-card-image img { display: block; width: 100%; height: 100%; object-fit: contain; background: #171717; transition: transform .35s ease; }
+.docent-card:hover .docent-card-image img { transform: scale(1.025); }
+.docent-card-copy { display: block; min-height: 3.4em; padding: 11px 13px 12px; font-size: 14px; font-weight: 720; letter-spacing: -.025em; line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .docent-card, .docent-card-image img { transition: none; } .docent-card:hover { transform: none; } }
 .back { color: var(--blue); font-size: 14px; font-weight: 700; }
 .back:hover, .card:hover h2 { color: var(--coral); }
 .loading, .error { color: var(--muted); padding: 48px 0; }
@@ -32,7 +51,7 @@ body:has(> .public-main) > .public-main { flex: 1 0 auto; width: 100%; }
 .map-canvas { height: 400px; background: #e9e7e2; border: 1px solid var(--line); }.map-panel { margin-top: 1px; background: var(--paper); }.map-panel p { margin:0; padding:14px; color:var(--muted); }.map-items { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:var(--line); }.map-museum { padding:15px; background:var(--paper); }.map-museum h3 { margin:0 0 8px; font-size:16px; }.map-museum ul { padding:0; margin:0; list-style:none; }.map-museum li { padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
 .quiz { max-width:680px; }.quiz-option { display:block; width:100%; text-align:left; padding:17px; margin:10px 0; border:1px solid var(--line); background:var(--paper); font:inherit; cursor:pointer; }.quiz-option:hover { border-color:var(--coral); background:var(--surface); }.quiz-progress { color:var(--muted); font-size:14px; }.quiz-result { padding:28px; background:var(--surface); border:1px solid var(--line); }.quiz-result h2 { font-size:30px; margin:0 0 8px; }.quiz-result p { white-space:pre-line; }.quiz-result ul { padding-left:20px; }
 .taste-intro { padding: clamp(12px, 2vw, 24px) 0; }.taste-intro h1 { margin-bottom: 10px; }.taste-question { margin: 0 0 25px; color: var(--blue); font-size: clamp(18px, 2.2vw, 22px); font-weight: 700; }.taste-guide { margin: 30px 0 22px; padding: 0 0 0 18px; border-left: 3px solid var(--coral); }.taste-guide h2, .taste-reference h2 { margin: 0 0 12px; font-size: 18px; }.taste-guide ul { margin: 0; padding-left: 20px; color: var(--muted); }.taste-guide li + li { margin-top: 8px; }.quiz-note { color: var(--muted); font-size: 14px; }.start-taste-button { width: 100%; margin-top: 16px; padding: 17px 20px; border: 0; background: var(--blue); color: white; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }.start-taste-button:hover { background: var(--coral); }.start-taste-button:disabled { opacity: .6; cursor: wait; }.start-taste-button span { margin-left: 8px; }.taste-reference { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.7; }.taste-reference p { margin: 0 0 12px; }.taste-reference ul { margin: 0; padding-left: 18px; }.taste-reference li + li { margin-top: 7px; }
-@media (max-width: 700px) { .grid, .mini-grid, .map-items { grid-template-columns: 1fr; } .public-main { padding-top: 42px; } .listing-highlight { padding:18px; } }
+@media (max-width: 700px) { .grid, .mini-grid, .map-items { grid-template-columns: 1fr; } .public-main { padding-top: 42px; } .listing-highlight { padding:18px; } .docent-image-grid, .docent-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .docent-card-image { min-height: 140px; } }
 /* 전시 찾기 나라 탭 — 국기 이모지 + 나라 이름 */
 .country-tabs a { display: inline-flex; align-items: center; gap: 6px; }
 .country-tabs .flag { font-size: 16px; line-height: 1; }
