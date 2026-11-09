@@ -1,3 +1,6 @@
+import json
+import re
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -616,6 +619,37 @@ def test_company_pages():
     res = get("/does-not-exist", "atelierlabs.co.kr")
     assert res.status_code == 404 and "페이지를 찾을 수 없어요" in res.text
     assert get("/assets/site.css", "atelierlabs.co.kr").headers["content-type"].startswith("text/css")
+
+
+def json_ld_graph(html: str) -> list[dict]:
+    return json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)[1])["@graph"]
+
+
+def test_company_home_carries_korean_brand_name():
+    """'아틀리에 랩스' 검색에 걸리도록 한국어 홈의 제목·h1·사이트 이름에 한글 이름이 있어야 한다."""
+    res = get("/", "atelierlabs.co.kr")
+    assert "<title>Atelier Labs(아틀리에 랩스)" in res.text
+    assert re.search(r"<h1[^>]*>.*아틀리에 랩스.*</h1>", res.text)
+    website = next(node for node in json_ld_graph(res.text) if node["@type"] == "WebSite")
+    assert website["name"] == "아틀리에 랩스" and website["url"] == "https://atelierlabs.co.kr/"
+
+
+@pytest.mark.parametrize("path", ["/", "/en/", "/ja/"])
+def test_company_homes_share_organization(path):
+    graph = json_ld_graph(get(path, "atelierlabs.co.kr").text)
+    org = next(node for node in graph if node["@type"] == "Organization")
+    assert org["@id"] == "https://atelierlabs.co.kr/#organization"
+    assert set(org["alternateName"]) == {"아틀리에 랩스", "아틀리에랩스", "アトリエラボ"}
+    assert [node["@type"] for node in graph].count("MobileApplication") == 2
+
+
+def test_company_sitemap_lists_only_live_pages():
+    res = get("/sitemap.xml", "atelierlabs.co.kr")
+    entry = r"<url><loc>https://atelierlabs\.co\.kr(/[^<]*)</loc><lastmod>\d{4}-\d{2}-\d{2}</lastmod></url>"
+    urls = re.findall(entry, res.text)
+    assert len(urls) == res.text.count("<url>") > 0
+    for path in urls:
+        assert get(path, "atelierlabs.co.kr").status_code == 200, path
 
 
 def test_localhost_rewrites_cross_site_links():

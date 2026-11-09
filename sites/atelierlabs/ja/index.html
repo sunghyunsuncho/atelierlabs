@@ -16,6 +16,7 @@
 <meta property="og:title" content="Atelier Labs" />
 <meta property="og:description" content="心を動かすものを見つけ、知り、長く大切にできるアプリをつくっています。" />
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Atelier Labs" />
 <meta property="og:url" content="https://atelierlabs.co.kr/ja/" />
 <meta property="og:locale" content="ja_JP" />
 <meta property="og:image" content="https://atelierlabs.co.kr/assets/og-image.png" />
@@ -25,10 +26,18 @@
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebSite",
+      "@id": "https://atelierlabs.co.kr/ja/#website",
+      "name": "Atelier Labs",
+      "url": "https://atelierlabs.co.kr/ja/",
+      "inLanguage": "ja",
+      "publisher": { "@id": "https://atelierlabs.co.kr/#organization" }
+    },
+    {
       "@type": "Organization",
       "@id": "https://atelierlabs.co.kr/#organization",
       "name": "Atelier Labs",
-      "alternateName": "アトリエラボ",
+      "alternateName": ["아틀리에 랩스", "아틀리에랩스", "アトリエラボ"],
       "url": "https://atelierlabs.co.kr/",
       "logo": "https://atelierlabs.co.kr/assets/icon.png",
       "email": "atelierlabs.kr@gmail.com"
@@ -40,6 +49,15 @@
       "operatingSystem": "iOS, Android",
       "applicationCategory": "LifestyleApplication",
       "url": "https://vernissage.atelierlabs.co.kr/ja/",
+      "publisher": { "@id": "https://atelierlabs.co.kr/#organization" }
+    },
+    {
+      "@type": "MobileApplication",
+      "name": "キープセイク",
+      "alternateName": "Keepsake",
+      "operatingSystem": "iOS, Android",
+      "applicationCategory": "LifestyleApplication",
+      "url": "https://keepsake.atelierlabs.co.kr/ja/",
       "publisher": { "@id": "https://atelierlabs.co.kr/#organization" }
     }
   ]
