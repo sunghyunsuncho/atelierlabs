@@ -1,0 +1,103 @@
+{
+  "docent/notes": {
+    "ko": {
+      "title": "도슨트",
+      "intro": "작품과 장소에 얽힌 이야기를 천천히 읽어보세요.",
+      "description": "작품과 미술관, 작가에 얽힌 이야기를 베르니사주 도슨트에서 천천히 읽어보세요."
+    },
+    "en": {
+      "title": "Docent",
+      "intro": "Slow down and enjoy the stories behind the art and the places it lives.",
+      "description": "Stories behind artworks, artists and museums, told slowly by the Vernissage docent."
+    },
+    "ja": {
+      "title": "ドーセント",
+      "intro": "作品や場所にまつわる物語を、ゆっくり味わってみてください。",
+      "description": "作品や美術館、作家にまつわる物語を、ヴェルニサージュのドーセントでゆっくり味わってみてください。"
+    }
+  },
+  "exhibitions": {
+    "ko": {
+      "title": "전시 찾기",
+      "intro": "지금 보고 싶은 전시를 찾아보세요.",
+      "heading": "진행 중인 전시 전체",
+      "description": "지금 진행 중인 전시와 곧 열리는 전시를 미술관별로 찾아보세요. 곧 끝나는 전시와 전시 지도도 함께 볼 수 있어요."
+    },
+    "en": {
+      "title": "Exhibitions",
+      "intro": "Find a show worth seeing right now.",
+      "heading": "All exhibitions on now",
+      "description": "Find exhibitions on now and coming soon, museum by museum — with shows closing soon and a map of what’s on."
+    },
+    "ja": {
+      "title": "展覧会を探す",
+      "intro": "今見に行きたい展覧会を探してみましょう。",
+      "heading": "開催中の展覧会一覧",
+      "description": "開催中・開催予定の展覧会を美術館ごとに探せます。まもなく終了する展覧会や展覧会マップもあわせてチェックできます。"
+    }
+  },
+  "art-events": {
+    "ko": {
+      "title": "비엔날레 · 아트페어",
+      "intro": "세계 곳곳에서 열리는 예술 행사를 살펴보세요.",
+      "heading": "진행 중 · 예정",
+      "description": "세계 곳곳에서 열리는 비엔날레와 아트페어 일정을 연간 캘린더와 목록으로 살펴보세요."
+    },
+    "en": {
+      "title": "Biennials & Art Fairs",
+      "intro": "See what’s happening in the art world, wherever it’s happening.",
+      "heading": "On now & upcoming",
+      "description": "Browse biennials and art fairs around the world on a yearly calendar or as a list of what’s on now and coming up."
+    },
+    "ja": {
+      "title": "ビエンナーレ・アートフェア",
+      "intro": "世界各地で開かれるアートイベントをチェックしましょう。",
+      "heading": "開催中・開催予定",
+      "description": "世界各地のビエンナーレやアートフェアの日程を、年間カレンダーと一覧でチェックできます。"
+    }
+  },
+  "art-taste-test": {
+    "ko": {
+      "title": "예술 취향 테스트",
+      "heading": "나의 예술 취향은?",
+      "question": "나는 어떤 작품에 마음이 끌릴까요?",
+      "lead1": "전시를 보다 보면 이유는 잘 모르겠지만<br />유난히 눈길이 머무는 작품이 있죠.",
+      "lead2": "마음이 가는 쪽을 하나씩 골라보세요.<br />선택 끝에 나만의 예술 취향을 만나볼 수 있어요.",
+      "tips_title": "이렇게 답하면 좋아요",
+      "tips": [
+        "아는 작품보다 더 끌리는 쪽을 골라보세요.",
+        "익숙한 장면을 떠올리면 더 쉬워요.",
+        "오래 고민하지 말고 첫 느낌대로 골라주세요."
+      ],
+      "description": "몇 가지 질문에 답하며 나에게 맞는 예술 취향을 알아보세요. 로그인 없이 바로 할 수 있어요."
+    },
+    "en": {
+      "title": "Art Taste Test",
+      "heading": "What’s your taste in art?",
+      "question": "What kind of art draws you in?",
+      "lead1": "At every exhibition, there’s that one piece<br />you keep coming back to — even if you can’t say why.",
+      "lead2": "Just pick whichever speaks to you, one at a time.<br />By the end, you’ll see what your taste in art looks like.",
+      "tips_title": "A few tips",
+      "tips": [
+        "Go with what draws you in, not what you know.",
+        "Picturing a familiar scene makes it easier.",
+        "Don’t overthink it — trust your first impression."
+      ],
+      "description": "Answer a few quick questions to discover your taste in art. No sign-in needed."
+    },
+    "ja": {
+      "title": "アートの好みテスト",
+      "heading": "あなたのアートの好みは？",
+      "question": "わたしはどんな作品に心惹かれるのだろう？",
+      "lead1": "展覧会を見ていると、理由はよくわからないけれど<br />なぜか目が留まる作品がありますよね。",
+      "lead2": "心が向くほうをひとつずつ選んでみてください。<br />選び終えると、自分だけのアートの好みに出会えます。",
+      "tips_title": "答えるときのコツ",
+      "tips": [
+        "知っている作品より、惹かれるほうを選んでください。",
+        "身近な場面を思い浮かべると選びやすくなります。",
+        "長く悩まず、第一印象で選んでください。"
+      ],
+      "description": "いくつかの質問に答えて、自分のアートの好みを見つけましょう。ログイン不要ですぐに始められます。"
+    }
+  }
+}

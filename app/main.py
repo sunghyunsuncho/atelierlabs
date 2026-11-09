@@ -509,9 +509,7 @@ DOCENT_EMBED = re.compile(
     rf"\[\[cards:((?:(?:{DOCENT_CARD_KINDS}):\d+)(?:,(?:{DOCENT_CARD_KINDS}):\d+)*)\]\]|"
     r"\[\[image:(https?://[^\]|]+)(?:\|([^]]*))?\]\]"
 )
-DOCENT_IMAGE_GROUP = re.compile(
-    r'(?:<figure class="docent-image">(?:(?!</figure>).)*</figure>(?:<br />)*){2,}', re.S
-)
+DOCENT_IMAGE_GROUP = re.compile(r'(?:<figure class="docent-image">(?:(?!</figure>).)*</figure>(?:<br />)*){2,}', re.S)
 DOCENT_IMAGE = re.compile(r'<figure class="docent-image">(?:(?!</figure>).)*</figure>', re.S)
 DOCENT_BOLD = re.compile(r"\*\*([^*\n](?:[^*\n]|\*(?!\*))*)\*\*")
 
@@ -539,7 +537,7 @@ def _render_docent_content(content: object) -> str:
         if image_url:
             rendered.append(
                 f'<figure class="docent-image"><img src="{html.escape(image_url, quote=True)}" '
-                f'alt="{html.escape(alt or '', quote=True)}" loading="lazy" /></figure>'
+                f'alt="{html.escape(alt or "", quote=True)}" loading="lazy" /></figure>'
             )
         elif cards:
             card_html: list[str] = []
@@ -560,8 +558,8 @@ def _render_docent_content(content: object) -> str:
         else:
             rendered.append(
                 f'<figure class="docent-image"><img src="{html.escape(embedded_image_url, quote=True)}" '
-                f'alt="{html.escape(caption or '', quote=True)}" loading="lazy" />'
-                f'{f"<figcaption>{html.escape(caption)}</figcaption>" if caption else ""}</figure>'
+                f'alt="{html.escape(caption or "", quote=True)}" loading="lazy" />'
+                f"{f'<figcaption>{html.escape(caption)}</figcaption>' if caption else ''}</figure>"
             )
         cursor = match.end()
     rendered.append(_render_docent_text(text[cursor:]))
@@ -578,7 +576,15 @@ def _public_url(path: str) -> str:
 
 
 def _render_vernissage_detail_shell(
-    site_dir: Path, language: str, path: str, title: str, description: str, body: str, image: str | None, schema: dict
+    site_dir: Path,
+    language: str,
+    path: str,
+    title: str,
+    description: str,
+    body: str,
+    image: str | None,
+    schema: dict,
+    og_type: str = "article",
 ) -> str:
     """기존 인터랙티브 셸에 크롤러가 즉시 읽을 수 있는 본문과 메타데이터를 넣는다."""
     lang_dir = language if language in LANGS else ""
@@ -604,7 +610,7 @@ def _render_vernissage_detail_shell(
             f'<meta name="description" content="{html.escape(description, quote=True)}" />',
             f'<meta property="og:title" content="{html.escape(title, quote=True)}" />',
             f'<meta property="og:description" content="{html.escape(description, quote=True)}" />',
-            '<meta property="og:type" content="article" />',
+            f'<meta property="og:type" content="{og_type}" />',
             f'<meta property="og:url" content="{canonical}" />',
             image_meta,
             '<meta name="twitter:card" content="summary_large_image" />',
@@ -633,9 +639,10 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     section, item_id = match.group(2), match.group(3)
     data, status = await _vernissage_public_json(request, f"{section}/{item_id}", language)
     if data is None:
-        # API 장애·미설정 시 기존 클라이언트 셸로 계속 제공한다. 실제로 존재하지 않는
-        # 콘텐츠만 404로 응답해 soft 404를 만들지 않는다.
-        return PlainTextResponse("Not Found", status_code=404) if status == 404 else None
+        # 실제로 존재하지 않는 콘텐츠만 404로 응답해 soft 404를 만들지 않는다.
+        if status in (404, 410):
+            return PlainTextResponse("Not Found", status_code=404)
+        return _vernissage_unavailable_shell(site_dir, language)
     item = data.get({"docent/notes": "note", "exhibitions": "exhibition", "art-events": "event"}[section])
     if not isinstance(item, dict):
         return PlainTextResponse("Not Found", status_code=404)
@@ -694,6 +701,147 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     )
 
 
+def _vernissage_unavailable_shell(site_dir: Path, language: str) -> Response | None:
+    """공개 API 장애 시 noindex 셸을 200으로 주면 검색엔진이 정상 페이지를 색인에서 뺀다.
+    503으로 응답해 크롤러는 나중에 다시 오게 하고, 사람에게는 셸이 브라우저에서 다시 시도하게 한다.
+    API 주소가 없는 로컬 개발 환경만 기존처럼 클라이언트 셸(200)을 준다."""
+    if not VERNISSAGE_API_BASE_URL:
+        return None
+    lang_dir = language if language in LANGS else ""
+    shell = site_dir / lang_dir / "public" / "index.html"
+    return HTMLResponse(
+        shell.read_text(encoding="utf-8"),
+        status_code=503,
+        headers={"Cache-Control": "no-store", "Retry-After": "120"},
+    )
+
+
+# 목록·취향 테스트 화면의 서버 렌더링 문구(ko/en/ja). h1·intro는 public.js의 T와 같은 문구라
+# 브라우저에서 셸 앱이 화면을 다시 그려도 내용이 바뀌지 않는다.
+VERNISSAGE_LISTING_COPY: dict[str, dict[str, dict]] = json.loads(
+    (Path(__file__).with_name("vernissage_listing_copy.json")).read_text(encoding="utf-8")
+)
+VERNISSAGE_SEO_LISTING = re.compile(r"^(?:(en|ja)/)?(docent/notes|exhibitions|art-events|art-taste-test)$")
+VERNISSAGE_LISTING_ENDPOINTS = {
+    "docent/notes": "docent/notes",
+    "exhibitions": "exhibitions?tab=ongoing",
+    "art-events": "art-events?status=current",
+}
+
+
+def _listing_card(section: str, item: dict, prefix: str) -> tuple[str, str, str] | None:
+    """목록 항목 하나를 (제목, id, 카드 HTML)로. 상세 링크를 만들 수 없는 항목은 건너뛴다."""
+    item_id = item.get("id")
+    if not isinstance(item_id, int) and not str(item_id or "").isdigit():
+        return None
+    series = item.get("series") if isinstance(item.get("series"), dict) else {}
+    museum = item.get("museum") if isinstance(item.get("museum"), dict) else {}
+    title = _seo_text(item.get("display_title") or item.get("title") or series.get("name"), 180)
+    if not title:
+        return None
+    period = " — ".join(str(item.get(key) or "")[:10] for key in ("start_date", "end_date") if item.get(key))
+    if section == "docent/notes":
+        meta = " · ".join(filter(None, (str(item.get("entity_label") or ""), str(item.get("published_at") or "")[:10])))
+        image = item.get("thumbnail_url")
+        extra = (
+            f"<p>{html.escape(_seo_text(_docent_plain_text(item.get('excerpt'))))}</p>" if item.get("excerpt") else ""
+        )
+    elif section == "exhibitions":
+        meta = " · ".join(filter(None, (str(museum.get("name") or item.get("place_name") or ""), period)))
+        image, extra = item.get("image_url"), ""
+    else:
+        place = " · ".join(
+            str(value)
+            for value in (
+                item.get("city") or series.get("home_city"),
+                item.get("country") or series.get("home_country"),
+            )
+            if value
+        )
+        meta = " · ".join(filter(None, (place, period)))
+        image, extra = item.get("image_url"), ""
+    thumb = (
+        f'<img class="thumb" src="{html.escape(str(image), quote=True)}" alt="" loading="lazy" />'
+        if image
+        else '<span class="thumb"></span>'
+    )
+    return (
+        title,
+        str(item_id),
+        (
+            f'<a class="card" href="{prefix}/{section}/{item_id}">{thumb}<div class="body">'
+            f'<p class="meta">{html.escape(meta)}</p><h2>{html.escape(title)}</h2>{extra}</div></a>'
+        ),
+    )
+
+
+async def _vernissage_seo_listing(request: Request, site_dir: Path, url_path: str) -> Response | None:
+    """도슨트·전시·행사 목록과 취향 테스트 첫 화면을 크롤러가 바로 읽을 수 있게 서버에서 그린다."""
+    match = VERNISSAGE_SEO_LISTING.fullmatch(url_path)
+    if not match:
+        return None
+    language = match.group(1) or "ko"
+    section = match.group(2)
+    prefix = "" if language == "ko" else f"/{language}"
+    copy = VERNISSAGE_LISTING_COPY[section][language]
+    page_url = _public_url(url_path)
+    if section == "art-taste-test":
+        tips = "".join(f"<li>{html.escape(tip)}</li>" for tip in copy["tips"])
+        # lead 문구의 <br />만 신뢰하는 고정 문구다(사용자 입력 아님).
+        body = (
+            '<section class="quiz taste-intro"><p class="highlight-label">ART TASTE TEST</p>'
+            f"<h1>{html.escape(copy['heading'])}</h1>"
+            f'<p class="taste-question">{html.escape(copy["question"])}</p>'
+            f'<p class="intro">{copy["lead1"]}</p><p class="intro">{copy["lead2"]}</p>'
+            f'<div class="taste-guide"><h2>{html.escape(copy["tips_title"])}</h2><ul>{tips}</ul></div></section>'
+        )
+        title = f"{copy['title']} — {copy['heading']}"
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": copy["title"],
+            "description": copy["description"],
+            "url": page_url,
+            "inLanguage": language,
+        }
+    else:
+        if limited := _rate_limit(request, "vernissage-detail", VERNISSAGE_DETAIL_REQUESTS_PER_MINUTE):
+            return limited
+        data, status = await _vernissage_public_json(request, VERNISSAGE_LISTING_ENDPOINTS[section], language)
+        if data is None or status != 200:
+            return _vernissage_unavailable_shell(site_dir, language)
+        items = data.get("items") if isinstance(data.get("items"), list) else []
+        cards = [card for item in items if isinstance(item, dict) and (card := _listing_card(section, item, prefix))]
+        heading = f'<h2 class="listing-all-title">{html.escape(copy["heading"])}</h2>' if copy.get("heading") else ""
+        grid = "".join(card for *_, card in cards)
+        body = (
+            f'<h1>{html.escape(copy["title"])}</h1><p class="intro">{html.escape(copy["intro"])}</p>'
+            f'<section class="listing-all">{heading}<div class="grid">{grid}</div></section>'
+        )
+        title = copy["title"]
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": copy["title"],
+            "description": copy["description"],
+            "url": page_url,
+            "inLanguage": language,
+            "mainEntity": {
+                "@type": "ItemList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": index, "name": name, "url": _public_url(f"{url_path}/{item_id}")}
+                    for index, (name, item_id, _) in enumerate(cards[:50], start=1)
+                ],
+            },
+        }
+    return HTMLResponse(
+        _render_vernissage_detail_shell(
+            site_dir, language, url_path, title, copy["description"], body, None, schema, og_type="website"
+        ),
+        headers={"Cache-Control": HTML_CACHE},
+    )
+
+
 async def _vernissage_dynamic_sitemap(request: Request) -> Response | None:
     """공개 API의 현재 노출 가능한 상세 URL을 언어별로 사이트맵에 추가한다."""
     global VERNISSAGE_SITEMAP_CACHE
@@ -730,6 +878,11 @@ async def _vernissage_dynamic_sitemap(request: Request) -> Response | None:
         "about",
         "en/about",
         "ja/about",
+        *(
+            f"{prefix}{section}"
+            for section in ("docent/notes", "exhibitions", "art-events", "art-taste-test")
+            for prefix in ("", "en/", "ja/")
+        ),
         "legal/terms-of-service",
         "legal/privacy-policy",
         "legal/account-deletion",
@@ -876,6 +1029,9 @@ async def serve(request: Request, url_path: str) -> Response:
 
     if site == "vernissage" and (seo_detail := await _vernissage_seo_detail(request, site_dir, url_path)):
         return seo_detail
+
+    if site == "vernissage" and (seo_listing := await _vernissage_seo_listing(request, site_dir, url_path)):
+        return seo_listing
 
     path = resolve_file(site_dir, url_path)
     if path is None:

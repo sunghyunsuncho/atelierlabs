@@ -115,6 +115,8 @@ def test_vernissage_dynamic_sitemap_includes_localized_about_pages(monkeypatch):
     assert response.status_code == 200
     for path in ("about", "en/about", "ja/about"):
         assert f"https://vernissage.atelierlabs.co.kr/{path}" in response.text
+    for path in ("docent/notes", "en/exhibitions", "ja/art-events", "art-taste-test", "en/art-taste-test"):
+        assert f"<loc>https://vernissage.atelierlabs.co.kr/{path}</loc>" in response.text
 
 
 @pytest.mark.parametrize(
@@ -520,6 +522,90 @@ def test_missing_vernissage_public_detail_is_a_real_404(monkeypatch):
     monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
     monkeypatch.setattr(main, "_upstream_get", upstream)
     assert get("/exhibitions/999999", "vernissage.localhost:8000").status_code == 404
+
+
+@pytest.mark.parametrize("status", [500, 502, 403])
+def test_unavailable_vernissage_api_is_a_temporary_error_not_noindex(monkeypatch, status):
+    """API 장애 때 noindex 셸을 200으로 주면 검색엔진이 정상 페이지를 색인에서 뺀다."""
+
+    async def upstream(request, url, headers):
+        return httpx.Response(status)
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    for path in ("/docent/notes/35", "/en/exhibitions/1", "/exhibitions", "/ja/docent/notes"):
+        res = get(path, "vernissage.localhost:8000")
+        assert res.status_code == 503, path
+        assert res.headers["retry-after"] == "120"
+        assert 'id="public-web-app"' in res.text
+
+
+@pytest.mark.parametrize(
+    ("path", "lang", "section", "endpoint", "payload", "href", "marker"),
+    [
+        (
+            "/docent/notes",
+            "ko",
+            "docent/notes",
+            "docent/notes",
+            {"items": [{"id": 36, "title": "모네의 정원", "excerpt": "**빛**의 이야기"}]},
+            'href="/docent/notes/36"',
+            "<h1>도슨트</h1>",
+        ),
+        (
+            "/en/exhibitions",
+            "en",
+            "exhibitions",
+            "exhibitions?tab=ongoing",
+            {"items": [{"id": 16915, "title": "Light & Shadow", "museum": {"name": "Leeum"}}]},
+            'href="/en/exhibitions/16915"',
+            "<h1>Exhibitions</h1>",
+        ),
+        (
+            "/ja/art-events",
+            "ja",
+            "art-events",
+            "art-events?status=current",
+            {"items": [{"id": 37, "series": {"name": "光州ビエンナーレ"}, "city": "光州"}]},
+            'href="/ja/art-events/37"',
+            "<h1>ビエンナーレ・アートフェア</h1>",
+        ),
+    ],
+)
+def test_vernissage_listings_are_server_rendered_for_search(
+    monkeypatch, path, lang, section, endpoint, payload, href, marker
+):
+    async def upstream(request, url, headers):
+        assert str(url).rsplit("/public-web/", 1)[1] == endpoint
+        assert headers["X-App-Language"] == lang
+        return httpx.Response(200, json=payload)
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get(path, "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert 'name="robots" content="index, follow"' in res.text
+    assert 'name="robots" content="noindex"' not in res.text
+    assert f'rel="canonical" href="https://vernissage.atelierlabs.co.kr{path}"' in res.text
+    assert f'hreflang="x-default" href="https://vernissage.atelierlabs.co.kr/{section}"' in res.text
+    assert marker in res.text
+    assert href in res.text
+    assert '"@type": "CollectionPage"' in res.text
+    assert "**" not in res.text
+
+
+@pytest.mark.parametrize(
+    ("lang", "heading"), [("", "나의 예술 취향은?"), ("en/", "taste in art?"), ("ja/", "アートの好み")]
+)
+def test_vernissage_taste_test_is_indexable_without_the_api(monkeypatch, lang, heading):
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "")
+    res = get(f"/{lang}art-taste-test", "vernissage.localhost:8000")
+    assert res.status_code == 200
+    assert 'name="robots" content="index, follow"' in res.text
+    assert 'name="robots" content="noindex"' not in res.text
+    assert f'rel="canonical" href="https://vernissage.atelierlabs.co.kr/{lang}art-taste-test"' in res.text
+    assert heading in res.text
+    assert 'id="public-web-app"' in res.text
 
 
 def test_vernissage_sitemap_adds_public_details_and_caches(monkeypatch):

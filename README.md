@@ -168,7 +168,11 @@ vernissage 리포는 이 사이트가 필요로 하는 데이터를 넘겨주는
 - `canonical`·`hreflang`·`og:*`·JSON-LD 주소는 `https://vernissage.atelierlabs.co.kr`
 - 공개 도슨트·전시·비엔날레·아트페어·예술취향테스트 화면은 이 리포의 정적 shell과 Vernissage 공개 API로 제공한다.
   도슨트·전시·아트이벤트의 상세 페이지는 같은 API 데이터로 서버 HTML과 검색 메타데이터를 먼저 제공하고,
-  `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 소개 페이지는 `https://vernissage.atelierlabs.co.kr/about`을 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
+  `sitemap.xml`에도 공개 상세 URL을 자동으로 반영한다. 목록(`/docent/notes`, `/exhibitions`, `/art-events`)과
+  `/art-taste-test` 첫 화면도 서버 HTML(`index, follow`, canonical, hreflang)로 제공하고 사이트맵에 싣는다. 목록·취향 테스트
+  문구는 `app/vernissage_listing_copy.json`에 있고, h1·소개 문장은 `assets/public.js`의 문구와 같게 유지한다.
+  공개 API가 실패하면 noindex shell을 200으로 주지 않고 503(`Retry-After`)으로 응답해 검색엔진이 정상 페이지를 색인에서
+  빼지 않게 한다(API 주소가 없는 로컬 개발만 기존 shell). 정적 shell의 `noindex`는 그 밖의 경로에만 남는다. 소개 페이지는 `https://vernissage.atelierlabs.co.kr/about`을 링크한다. 홈의 "도슨트·곧 끝나는 전시" 섹션과
   AdSense 자리표시는 두지 않는다.
 - 도슨트 본문은 일반 텍스트뿐 아니라 강조 문장, 출처를 포함한 이미지, 작품·작가·미술 개념 등의 참조 카드를 표시한다. 여러 참조·이미지는 화면 크기에 맞춰 그리드로 묶어 보여 준다.
 - 웹 페이지가 없는 앱 전용 상세(`/museums`, `/artworks`, `/artists`, `/art-concepts`, `/art-figures` 아래, 언어별)는 앱이 없는 사람에게 `<lang>/get-app.html` 설치 안내를 보여준다. `assets/get-app.js` 동작: 카카오톡·인스타그램 등 인앱 브라우저와 Android는 먼저 앱을 직접 열고(Android `intent://`, iOS `vernissage://`), 1.6초 안에 앱이 열리지 않으면 스토어로 보낸다. iOS Safari는 앱이 있으면 Universal Links가 이미 열었을 것이므로 바로 App Store로 보낸다. 데스크톱은 스토어 배지만 보여준다.
