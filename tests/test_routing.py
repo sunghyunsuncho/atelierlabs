@@ -524,6 +524,107 @@ def test_missing_vernissage_public_detail_is_a_real_404(monkeypatch):
     assert get("/exhibitions/999999", "vernissage.localhost:8000").status_code == 404
 
 
+def _json_ld(text: str) -> dict:
+    return json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', text, re.S).group(1))
+
+
+def test_vernissage_exhibition_structured_data_has_a_location(monkeypatch):
+    """Google Event 리치 결과는 location이 필수다(실제 /ja/exhibitions/16758 응답 기반)."""
+
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "indexable": True,
+                "exhibition": {
+                    "id": 16758,
+                    "title": "《군락: 여섯 개의 뜰》",
+                    "start_date": "2026-10-09",
+                    "end_date": "2027-05-30",
+                    "description": "2026.10.24\n          ~\n          2026.10.24",
+                    "image_url": "https://images.example/ex.jpg",
+                    "place_name": "소마미술관 2관",
+                    "institution_name": "소마미술관",
+                    "museum": {
+                        "name": "SOMA美術館",
+                        "city": "서울특별시 송파구",
+                        "address": "서울특별시 송파구 올림픽로 424",
+                        "latitude": 37.5169172,
+                        "longitude": 127.1179749,
+                        "website": "https://soma.kspo.or.kr/",
+                    },
+                },
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get("/ja/exhibitions/16758", "vernissage.localhost:8000")
+    schema = _json_ld(res.text)
+    assert schema["@type"] == "ExhibitionEvent"
+    assert schema["location"]["name"] == "SOMA美術館"
+    assert schema["location"]["address"]["streetAddress"] == "서울특별시 송파구 올림픽로 424"
+    assert schema["location"]["geo"]["latitude"] == 37.5169172
+    assert schema["organizer"]["name"] == "소마미술관"
+    assert schema["eventStatus"] == "https://schema.org/EventScheduled"
+    # 날짜만 있는 수집 설명은 쓰지 않고 장소·기간으로 설명을 만든다.
+    assert "2026.10.24" not in res.text
+    assert schema["description"] == "《군락: 여섯 개의 뜰》 · SOMA美術館 · 2026-10-09 ~ 2027-05-30"
+
+
+def test_vernissage_art_event_structured_data_has_a_location(monkeypatch):
+    """실제 /en/art-events/206 응답 기반: 장소는 도시·나라, 주최·이미지는 시리즈에서."""
+
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "event": {
+                    "id": 206,
+                    "display_title": "Art Cologne 2026",
+                    "start_date": "2026-11-05",
+                    "end_date": "2026-11-08",
+                    "city": "쾰른",
+                    "country": "독일",
+                    "country_code": "DE",
+                    "image_url": None,
+                    "description": None,
+                    "venues": [],
+                    "series": {
+                        "name": "Art Cologne",
+                        "organizer": "Koelnmesse",
+                        "description": "Art Cologne is an art fair held annually in Cologne.",
+                        "thumbnail_url": "https://images.example/logo.png",
+                    },
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    schema = _json_ld(get("/en/art-events/206", "vernissage.localhost:8000").text)
+    assert schema["@type"] == "Event"
+    assert schema["location"] == {
+        "@type": "Place",
+        "name": "쾰른, 독일",
+        "address": {"@type": "PostalAddress", "addressLocality": "쾰른", "addressCountry": "DE"},
+    }
+    assert schema["organizer"] == {"@type": "Organization", "name": "Koelnmesse"}
+    assert schema["image"] == "https://images.example/logo.png"
+    assert None not in schema.values()
+
+
+def test_vernissage_event_without_a_place_is_not_an_invalid_event(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(200, json={"event": {"id": 7, "display_title": "Unknown fair", "series": {}}})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    schema = _json_ld(get("/art-events/7", "vernissage.localhost:8000").text)
+    assert schema["@type"] == "WebPage"
+    assert "location" not in schema
+
+
 @pytest.mark.parametrize("status", [500, 502, 403])
 def test_unavailable_vernissage_api_is_a_temporary_error_not_noindex(monkeypatch, status):
     """API 장애 때 noindex 셸을 200으로 주면 검색엔진이 정상 페이지를 색인에서 뺀다."""

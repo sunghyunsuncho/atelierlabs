@@ -650,11 +650,20 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     title = _seo_text(item.get("display_title") or item.get("title") or series.get("name"), 180)
     if not title:
         return PlainTextResponse("Not Found", status_code=404)
+    if section != "docent/notes":
+        # 수집처에 따라 설명 칸에 "2026.10.24 ~ 2026.10.24" 같은 날짜만 들어오는 경우가 있다.
+        # 그런 값은 검색 설명·본문으로 쓰지 않고 장소·기간으로 만든 설명을 쓴다.
+        item = {**item, "description": _meaningful_text(item.get("description"))}
+        series = {**series, "description": _meaningful_text(series.get("description"))}
     description_source = (
-        item.get("excerpt") or item.get("description") or item.get("content") or series.get("description") or title
+        item.get("excerpt")
+        or item.get("description")
+        or item.get("content")
+        or series.get("description")
+        or (_event_summary(title, item, series) if section != "docent/notes" else title)
     )
     description = _seo_text(_docent_plain_text(description_source) if section == "docent/notes" else description_source)
-    image = item.get("thumbnail_url") or item.get("image_url")
+    image = item.get("thumbnail_url") or item.get("image_url") or series.get("thumbnail_url")
     if section == "docent/notes":
         content = item.get("content") or item.get("excerpt") or ""
         schema = {
@@ -668,16 +677,7 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
         }
     else:
         content = item.get("description") or series.get("description") or ""
-        schema = {
-            "@context": "https://schema.org",
-            "@type": "Event",
-            "name": title,
-            "description": description,
-            "image": image,
-            "startDate": item.get("start_date"),
-            "endDate": item.get("end_date"),
-            "url": _public_url(url_path),
-        }
+        schema = _event_schema(section, item, series, title, description, image, _public_url(url_path))
     content_html = (
         _render_docent_content(content)
         if section == "docent/notes"
@@ -698,6 +698,121 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     return HTMLResponse(
         _render_vernissage_detail_shell(site_dir, language, url_path, title, description, body, image, schema),
         headers={"Cache-Control": HTML_CACHE},
+    )
+
+
+def _meaningful_text(value: object) -> str:
+    """글자 없이 숫자·기호(날짜, 물결표 등)만 있는 설명은 빈 값으로 본다."""
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text if re.search(r"[^\W\d_]", text) else ""
+
+
+def _event_place(item: dict, series: dict) -> tuple[str, str]:
+    """(도시, 나라) — 회차에 없으면 시리즈의 개최지를 쓴다."""
+    return (
+        str(item.get("city") or series.get("home_city") or ""),
+        str(item.get("country") or series.get("home_country") or ""),
+    )
+
+
+def _event_summary(title: str, item: dict, series: dict) -> str:
+    museum = item.get("museum") if isinstance(item.get("museum"), dict) else {}
+    place = museum.get("name") or item.get("place_name") or ", ".join(filter(None, _event_place(item, series)))
+    period = " ~ ".join(str(item.get(key))[:10] for key in ("start_date", "end_date") if item.get(key))
+    return " · ".join(filter(None, (title, str(place or ""), period)))
+
+
+def _drop_empty(value: object) -> object:
+    """구조화 데이터에서 값이 없는 필드는 빼야 Google이 잘못된 값으로 읽지 않는다."""
+    if isinstance(value, dict):
+        cleaned = {key: _drop_empty(item) for key, item in value.items()}
+        return {key: item for key, item in cleaned.items() if item not in (None, "", [], {})}
+    return value
+
+
+def _event_location(section: str, item: dict, series: dict) -> dict | None:
+    """Google Event 구조화 데이터의 필수 항목인 location(Place + address)."""
+    if section == "exhibitions":
+        museum = item.get("museum") if isinstance(item.get("museum"), dict) else {}
+        name = museum.get("name") or item.get("place_name") or item.get("institution_name")
+        address = museum.get("address") or museum.get("city")
+        geo = (
+            {"@type": "GeoCoordinates", "latitude": museum["latitude"], "longitude": museum["longitude"]}
+            if museum.get("latitude") is not None and museum.get("longitude") is not None
+            else None
+        )
+        if not (name and address):
+            return None
+        return {
+            "@type": "Place",
+            "name": name,
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": museum.get("address"),
+                "addressLocality": museum.get("city"),
+            },
+            "geo": geo,
+            "url": museum.get("website"),
+        }
+    venues = [venue for venue in item.get("venues") or [] if isinstance(venue, dict)]
+    venue = venues[0] if venues else {}
+    city, country = _event_place(item, series)
+    if not (city or country or venue.get("address")):
+        return None
+    return {
+        "@type": "Place",
+        "name": venue.get("name") or ", ".join(filter(None, (city, country))),
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": venue.get("address"),
+            "addressLocality": city,
+            "addressCountry": item.get("country_code") or country,
+        },
+    }
+
+
+def _event_schema(
+    section: str, item: dict, series: dict, title: str, description: str, image: object, url: str
+) -> dict:
+    """전시·아트이벤트 상세의 JSON-LD. 장소를 알 수 없으면 Event 필수 항목(location)을 채울 수 없으므로
+    잘못된 Event 대신 WebPage로 내보낸다."""
+    location = _event_location(section, item, series)
+    if location is None:
+        return _drop_empty(
+            {
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": title,
+                "description": description,
+                "url": url,
+            }
+        )
+    if section == "exhibitions":
+        museum = item.get("museum") if isinstance(item.get("museum"), dict) else {}
+        organizer = {
+            "@type": "Organization",
+            "name": item.get("institution_name") or museum.get("name"),
+            "url": museum.get("website"),
+        }
+        event_type = "ExhibitionEvent"
+    else:
+        organizer = {"@type": "Organization", "name": series.get("organizer")}
+        event_type = "Event"
+    return _drop_empty(
+        {
+            "@context": "https://schema.org",
+            "@type": event_type,
+            "name": title,
+            "description": description,
+            "image": image,
+            "startDate": item.get("start_date"),
+            "endDate": item.get("end_date"),
+            "eventStatus": "https://schema.org/EventScheduled",
+            "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+            "location": location,
+            "organizer": organizer if organizer.get("name") else None,
+            "url": url,
+        }
     )
 
 
