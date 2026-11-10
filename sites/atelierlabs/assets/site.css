@@ -128,6 +128,8 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
 }
 .button.primary { background: var(--ink); color: #fff; }
 .button:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* --blue(#16212B)가 --ink(#151515)와 거의 같아 primary는 hover 색을 코랄로 바꿔야 변화가 보인다 */
+.button.primary:hover { background: var(--coral); border-color: var(--coral); }
 
 /* app showcase */
 .showcase { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(32px, 6vw, 96px); align-items: center; padding: clamp(48px, 6vw, 80px) 0; border-top: 1px solid var(--line-strong); }
@@ -209,7 +211,8 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
 .closing em { font-style: normal; color: var(--coral); }
 
 /* contact band */
-.contact-band { background: var(--blue); color: #fff; }
+/* 바로 아래 푸터(--ink)와 색이 거의 같아 경계선으로 구분한다 */
+.contact-band { background: var(--blue); color: #fff; border-bottom: 1px solid rgba(255, 255, 255, .12); }
 .contact-band .wrap { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; padding-top: clamp(64px, 8vw, 112px); padding-bottom: clamp(64px, 8vw, 112px); }
 .contact-band h2 { margin: 0 0 12px; font-size: clamp(28px, 3.6vw, 48px); line-height: 1.12; letter-spacing: -.06em; }
 .contact-band p { margin: 0; color: rgba(255, 255, 255, .76); font-size: 16px; }
