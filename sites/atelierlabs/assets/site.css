@@ -6,8 +6,8 @@
   --muted: #5c5c5c;
   --line: rgba(21, 21, 21, .16);
   --line-strong: rgba(21, 21, 21, .32);
-  --blue: #153151;
-  --coral: #B26634;
+  --blue: #16212B;
+  --coral: #CD5837;
   --gutter: clamp(20px, 4.4vw, 72px);
 }
 * { box-sizing: border-box; }
@@ -214,7 +214,7 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
 .contact-band h2 { margin: 0 0 12px; font-size: clamp(28px, 3.6vw, 48px); line-height: 1.12; letter-spacing: -.06em; }
 .contact-band p { margin: 0; color: rgba(255, 255, 255, .76); font-size: 16px; }
 .contact-band .mail { flex: 0 0 auto; font-size: clamp(18px, 2vw, 26px); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--coral); padding-bottom: 2px; }
-.contact-band .mail:hover { color: #f0d6c0; }
+.contact-band .mail:hover { color: #F3DCC9; }
 
 /* footer — 세 사이트 공통, 위치·크기가 같도록 고정 격자를 쓴다.
    위 줄: [로고(오른쪽에 앱 다운로드) 340px | 링크 묶음 4칸 균등 | Made by 100px], 아래 줄: 문의·저작권.

@@ -36,7 +36,7 @@ FONT_WEIGHT = _F["weight"]
 TRACKING_EM = _F["tracking_em"]  # 자간, 글자 크기(em) 대비 — CSS letter-spacing과 같은 단위
 CORNER_ROUND = _F["corner_round"]  # 모서리 둥글림, 대문자 높이 대비
 TEXT_COLOR = (21, 21, 21)  # 사이트 글자색 --ink #151515
-ACCENT_COLOR = (178, 102, 52)  # 사이트 코랄 #B26634 — 앱 워드마크 끝 점
+ACCENT_COLOR = (205, 88, 55)  # 사이트 코랄 #CD5837(베르니사주 앱 orange와 동일) — 앱 워드마크 끝 점
 DARK_TEXT_COLOR = (255, 255, 255)  # 어두운 푸터용 logo-dark.png 글자색
 SUPERSAMPLE = 8
 

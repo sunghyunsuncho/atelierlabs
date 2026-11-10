@@ -8,8 +8,8 @@
   --muted: #5c5c5c;
   --line: rgba(21, 21, 21, .16);
   --line-strong: rgba(21, 21, 21, .32);
-  --blue: #153151;
-  --coral: #B26634;
+  --blue: #16212B;
+  --coral: #CD5837;
   --gutter: clamp(20px, 4.4vw, 72px);
 }
 * { box-sizing: border-box; }
