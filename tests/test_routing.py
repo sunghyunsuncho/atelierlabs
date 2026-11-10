@@ -907,10 +907,31 @@ def json_ld_graph(html: str) -> list[dict]:
 def test_company_home_carries_korean_brand_name():
     """'아틀리에 랩스' 검색에 걸리도록 한국어 홈의 제목·h1·사이트 이름에 한글 이름이 있어야 한다."""
     res = get("/", "atelierlabs.co.kr")
-    assert "<title>Atelier Labs(아틀리에 랩스)" in res.text
+    assert "<title>Atelier Labs 아틀리에 랩스" in res.text
     assert re.search(r"<h1[^>]*>.*아틀리에 랩스.*</h1>", res.text)
     website = next(node for node in json_ld_graph(res.text) if node["@type"] == "WebSite")
     assert website["name"] == "아틀리에 랩스" and website["url"] == "https://atelierlabs.co.kr/"
+
+
+def test_company_home_carries_japanese_brand_name():
+    res = get("/ja/", "atelierlabs.co.kr")
+    assert "<title>Atelier Labs アトリエラボ" in res.text
+    assert 'property="og:title" content="Atelier Labs アトリエラボ"' in res.text
+
+
+@pytest.mark.parametrize(
+    ("host", "path", "brand_name"),
+    [
+        ("vernissage.atelierlabs.co.kr", "/", "Vernissage 베르니사주"),
+        ("vernissage.atelierlabs.co.kr", "/ja/", "Vernissage ヴェルニサージュ"),
+        ("keepsake.atelierlabs.co.kr", "/", "Keepsake 킵세이크"),
+        ("keepsake.atelierlabs.co.kr", "/ja/", "Keepsake キープセイク"),
+    ],
+)
+def test_app_homes_carry_localized_brand_names(host, path, brand_name):
+    res = get(path, host)
+    assert f"<title>{brand_name}" in res.text
+    assert f'property="og:title" content="{brand_name}' in res.text
 
 
 @pytest.mark.parametrize("path", ["/", "/en/", "/ja/"])

@@ -66,7 +66,7 @@ URL은 `sites/<site>/` 아래 파일로 이렇게 매핑된다.
 - 각 사이트 홈(ko/en/ja)에는 `og:locale`, `twitter:*`, JSON-LD(`Organization`·`WebSite`·`MobileApplication`)를 둔다.
   Atelier Labs 홈의 JSON-LD에는 Vernissage·Keepsake 앱을 모두 싣는다. 사이트맵에 실린 정적 문서(예: 계정 삭제 안내)에는
   `description`, `robots`(index, follow), `og:*`를 넣는다.
-- Atelier Labs 한국어 페이지는 '아틀리에 랩스' 검색에 걸리도록 `<title>`·`og:title`에 `Atelier Labs(아틀리에 랩스)`를 쓰고,
+- Atelier Labs 한국어 페이지는 '아틀리에 랩스' 검색에 걸리도록 `<title>`·`og:title`에 `Atelier Labs 아틀리에 랩스`를 쓰고,
   홈 h1 안에 한글 이름(`.hero-reading`)을 둔다. 루트 홈 `WebSite`의 `name`("아틀리에 랩스")은 구글 검색 결과의 사이트 이름이 된다.
   회사 `Organization`(`#organization`)은 세 언어 홈에서 `alternateName`까지 똑같이 유지한다.
 - 정적 `sitemap.xml`의 `lastmod`는 페이지를 실제로 고친 날짜로 갱신한다.
