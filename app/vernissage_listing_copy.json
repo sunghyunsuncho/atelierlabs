@@ -3,17 +3,17 @@
     "ko": {
       "title": "도슨트",
       "intro": "작품과 장소에 얽힌 이야기를 천천히 읽어보세요.",
-      "description": "작품과 미술관, 작가에 얽힌 이야기를 베르니사주 도슨트에서 천천히 읽어보세요."
+      "description": "작품과 미술관, 작가에 얽힌 이야기를 베르니사주 도슨트에서 천천히 읽어보세요. 새로운 글이 꾸준히 발행돼요."
     },
     "en": {
       "title": "Docent",
       "intro": "Slow down and enjoy the stories behind the art and the places it lives.",
-      "description": "Stories behind artworks, artists and museums, told slowly by the Vernissage docent."
+      "description": "Stories behind artworks, artists and museums, told slowly by the Vernissage docent, with new ones published all the time."
     },
     "ja": {
       "title": "ドーセント",
       "intro": "作品や場所にまつわる物語を、ゆっくり味わってみてください。",
-      "description": "作品や美術館、作家にまつわる物語を、ヴェルニサージュのドーセントでゆっくり味わってみてください。"
+      "description": "作品や美術館、作家にまつわる物語を、ヴェルニサージュのドーセントでゆっくり味わってみてください。新しい記事が次々に公開されます。"
     }
   },
   "exhibitions": {
@@ -21,19 +21,19 @@
       "title": "전시 찾기",
       "intro": "지금 보고 싶은 전시를 찾아보세요.",
       "heading": "진행 중인 전시 전체",
-      "description": "지금 진행 중인 전시와 곧 열리는 전시를 미술관별로 찾아보세요. 곧 끝나는 전시와 전시 지도도 함께 볼 수 있어요."
+      "description": "전 세계에서 지금 진행 중인 전시와 곧 열리는 전시를 미술관별로 찾아보세요. 곧 끝나는 전시와 전시 지도도 함께 볼 수 있어요."
     },
     "en": {
       "title": "Exhibitions",
       "intro": "Find a show worth seeing right now.",
       "heading": "All exhibitions on now",
-      "description": "Find exhibitions on now and coming soon, museum by museum — with shows closing soon and a map of what’s on."
+      "description": "Find exhibitions on now and coming soon around the world, museum by museum — with shows closing soon and a map of what’s on."
     },
     "ja": {
       "title": "展覧会を探す",
       "intro": "今見に行きたい展覧会を探してみましょう。",
       "heading": "開催中の展覧会一覧",
-      "description": "開催中・開催予定の展覧会を美術館ごとに探せます。まもなく終了する展覧会や展覧会マップもあわせてチェックできます。"
+      "description": "世界各地の開催中・開催予定の展覧会を美術館ごとに探せます。まもなく終了する展覧会や展覧会マップもあわせてチェックできます。"
     }
   },
   "art-events": {
