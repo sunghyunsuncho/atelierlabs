@@ -625,6 +625,33 @@ def test_vernissage_event_without_a_place_is_not_an_invalid_event(monkeypatch):
     assert "location" not in schema
 
 
+def test_vernissage_event_without_a_start_date_is_not_an_invalid_event(monkeypatch):
+    """실제 /en/art-events/46 응답 기반: 장소는 정해졌지만 날짜가 아직 발표되지 않은 회차."""
+
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "event": {
+                    "id": 46,
+                    "display_title": "Frieze Seoul 2027",
+                    "start_date": None,
+                    "end_date": None,
+                    "city": "서울",
+                    "country_code": "KR",
+                    "venues": [{"name": "Dongdaemun Design Plaza"}],
+                    "series": {"organizer": "Frieze"},
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    schema = _json_ld(get("/en/art-events/46", "vernissage.localhost:8000").text)
+    assert schema["@type"] == "WebPage"
+    assert "startDate" not in schema
+
+
 @pytest.mark.parametrize("status", [500, 502, 403])
 def test_unavailable_vernissage_api_is_a_temporary_error_not_noindex(monkeypatch, status):
     """API 장애 때 noindex 셸을 200으로 주면 검색엔진이 정상 페이지를 색인에서 뺀다."""

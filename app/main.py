@@ -774,9 +774,9 @@ def _event_location(section: str, item: dict, series: dict) -> dict | None:
 def _event_schema(
     section: str, item: dict, series: dict, title: str, description: str, image: object, url: str
 ) -> dict:
-    """전시·아트이벤트 상세의 JSON-LD. 장소를 알 수 없으면 Event 필수 항목(location)을 채울 수 없으므로
-    잘못된 Event 대신 WebPage로 내보낸다."""
-    location = _event_location(section, item, series)
+    """전시·아트이벤트 상세의 JSON-LD. 장소나 시작일을 알 수 없으면 Event 필수 항목(location, startDate)을
+    채울 수 없으므로 잘못된 Event 대신 WebPage로 내보낸다(예: 날짜 미발표인 다음 회차)."""
+    location = _event_location(section, item, series) if item.get("start_date") else None
     if location is None:
         return _drop_empty(
             {
