@@ -34,6 +34,7 @@
     <li>Subscription information: subscription status, expiry date and payment event records. Card numbers and other payment details are handled by Apple and Google; we never receive them.</li>
     <li>Photo link information: the identifiers of photos in your device's photo library, and a device key (a hash of your device's unique value combined with your account)</li>
     <li>Notification information: your push notification token and device type (iOS or Android)</li>
+    <li>Reporting and blocking information (Shared Albums): who made a report, the photo or member reported, the reason and any details given, the Shared Album's name and the member's display name at the time of the report, and how it was resolved; the users you block and their display names at the time</li>
     <li>Information collected automatically: your storage usage and photo count, and, when the app encounters an error, your device model, OS version, app version and error details</li>
   </ul>
   <p><strong>Information kept only on your device (never sent to us)</strong></p>
@@ -53,13 +54,14 @@
     <tr><td>Backing up your entries, restoring them on a new device and syncing them across devices</td><td>Entries, albums, picking history</td></tr>
     <tr><td>Providing the Safe Library</td><td>Photos in Safe Albums, storage usage</td></tr>
     <tr><td>Providing Shared Albums and album maps</td><td>Shared photos, their capture times and location coordinates</td></tr>
+    <tr><td>Handling reports in Shared Albums, acting on prohibited conduct, and hiding photos from users you block</td><td>Reporting and blocking information, reported photos</td></tr>
     <tr><td>Verifying your subscription and handling its expiry</td><td>Subscription information</td></tr>
     <tr><td>Reconnecting your entries to the original photos in your device's photo library after you reinstall the app</td><td>Photo link information</td></tr>
     <tr><td>Notifying you when your subscription ends and before your photos are deleted</td><td>Push notification token, device type</td></tr>
     <tr><td>Showing ads and measuring ad performance (users who do not subscribe)</td><td>Advertising information</td></tr>
     <tr><td>Troubleshooting errors and keeping the Service stable</td><td>Device information, error details</td></tr>
   </table>
-  <p>We never use your photos or notes for advertising, profiling or AI training, and we never sell them.</p>
+  <p>We never use your photos or notes for advertising, profiling or AI training, and we never sell them. Reported Shared Album photos are viewed only by the staff who handle reports.</p>
 
   <h2>3. Retention and Deletion</h2>
   <ul>
@@ -68,6 +70,7 @@
     <li>When you remove a photo from a Safe Album, we delete it from our servers if it is no longer in any Safe Album.</li>
     <li>When your subscription ends, we delete only the photos on our servers, 30 days later. Your entries, albums, photo link information and account are kept until you delete your account.</li>
     <li>When you delete your account, we immediately delete your entries, photos, photo link information, account information, subscription information and push notification tokens from our servers, and we also delete your customer record at RevenueCat.</li>
+    <li>We keep report records for 1 year after a report is resolved and then delete them automatically. We keep them so we can tell whether the same user keeps breaking the rules, so they are kept for this period even if the reporting or reported user deletes their account (a deleted reporter is no longer linked to the report). Blocking information is deleted when you unblock someone or delete your account.</li>
     <li>Signing out leaves your information on our servers, so you can pick up where you left off when you sign in again.</li>
     <li>Where the law requires us to keep certain information, we keep it for the required period. Under the Korean Act on the Consumer Protection in Electronic Commerce, records of contracts, cancellations, payments and the supply of goods are kept for 5 years, and records of consumer complaints and dispute resolution for 3 years. For this reason, payment event records are kept for 5 years from the date we receive them, even after you delete your account, and are then deleted automatically.</li>
   </ul>
@@ -104,6 +107,7 @@
     <li>Deleting photos: removing a photo from a Safe Album deletes it from our servers.</li>
     <li>Suspension of processing: you can ask us to stop processing your personal information.</li>
     <li>Opting out of notifications: you can turn off notification permission in your device settings.</li>
+    <li>Managing blocks: you can block a Shared Album member, and unblock them under [Settings &gt; Account &gt; Blocked people] in the app.</li>
     <li>Opting out of personalized ads: on iOS, decline the app tracking request or turn it off under [Settings &gt; Privacy &amp; Security &gt; Tracking]; on Android, delete or reset your advertising ID in your device's ad settings. In regions where consent is required, such as Europe, you can change your choices at any time under [Settings &gt; Ad privacy choices] in the app. You may still see ads that are not personalized.</li>
     <li>Deleting your account: go to [Settings &gt; Account &gt; Delete Account] in the app, or email us.</li>
   </ul>
@@ -126,7 +130,7 @@
     <tr><td>Google LLC (AdMob)</td><td>United States</td><td>Advertising information</td><td>Showing ads and measuring ad performance</td></tr>
     <tr><td>650 Industries, Inc. (Expo)</td><td>United States</td><td>Push notification tokens, device type, notification titles and content</td><td>Relaying app push notifications</td></tr>
     <tr><td>RevenueCat, Inc.</td><td>United States</td><td>Account identifier (a random ID we generate), purchase history</td><td>Verifying subscription status</td></tr>
-    <tr><td>Railway Inc.</td><td>Singapore</td><td>Account information, entries, albums, subscription information, photo link information, notification information</td><td>Server hosting and data storage</td></tr>
+    <tr><td>Railway Inc.</td><td>Singapore</td><td>Account information, entries, albums, subscription information, photo link information, notification information, reporting and blocking information</td><td>Server hosting and data storage</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Cloudflare data centers, including in the United States</td><td>Photos in Safe Albums (originals and viewing copies)</td><td>Storing and serving photos (R2 Object Storage)</td></tr>
     <tr><td>Sentry (Functional Software, Inc.)</td><td>United States</td><td>Device information (OS, device model, app version), technical logs from the time of an error, and the account identifier for server errors</td><td>Collecting app error and crash reports and improving the stability of the Service</td></tr>
   </table>
