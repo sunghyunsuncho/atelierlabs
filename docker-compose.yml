@@ -13,8 +13,6 @@ services:
     environment:
       VERNISSAGE_API_BASE_URL: ${VERNISSAGE_API_BASE_URL:-http://host.docker.internal:18000}
       VERNISSAGE_PUBLIC_WEB_API_TOKEN: ${VERNISSAGE_PUBLIC_WEB_API_TOKEN:-}
-      KEEPSAKE_API_BASE_URL: ${KEEPSAKE_API_BASE_URL:-http://host.docker.internal:18020}
-      KEEPSAKE_PUBLIC_WEB_API_TOKEN: ${KEEPSAKE_PUBLIC_WEB_API_TOKEN:-}
     volumes:
       # 이미지 안의 .venv 를 가리지 않도록 코드·정적 파일만 마운트한다.
       - ./app:/app/app

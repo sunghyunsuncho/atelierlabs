@@ -109,7 +109,6 @@ Compose 프로젝트명도 `atelierlabs`로 고정되어 컨테이너·네트워
 |---|---|
 | 웹 개발 서버 (사이트 서버) | 13000 |
 | Vernissage API (별도 `vernissage` 리포) | 18000 |
-| Keepsake API (별도 `keepsake` 리포) | 18020 |
 | API (atelierlabs용 예약) | 18010 |
 | Postgres 호스트 (예약, 미사용) | 15433 |
 | Redis 호스트 (예약, 미사용) | 16380 |
@@ -235,15 +234,18 @@ private network는 `http`를 사용하며, 같은 프로젝트·환경 안에서
 
 ### 이용약관·개인정보 처리방침
 
-법률 문서의 원본은 홈페이지 리포가 아니라 각 앱 백엔드에 둔다. 홈페이지는 기존 공개 URL을 유지한 채
-해당 문서를 프록시하므로, 앱 백엔드에서 문서를 배포하면 홈페이지를 다시 배포하지 않아도 최신 원문이
-반영된다. 문서와 오류 응답은 캐시하지 않는다. API는 공개 웹 공유 토큰으로 보호하며, 운영 환경에서는
-아래 두 쌍을 같은 무작위 값으로 설정한다.
+**Keepsake**: 원본이 이 리포의 정적 HTML이다. 한국어는
+[sites/keepsake/legal/](sites/keepsake/legal/), 영어는 [sites/keepsake/en/legal/](sites/keepsake/en/legal/)에 있고
+`/legal/terms-of-service`, `/legal/privacy-policy`(영어는 `/en/legal/…`)로 보인다. 앱과 스토어 등록 정보가
+이 주소를 연다. 고치면 영어판과 시행일을 함께 고치고 홈페이지를 배포한다 (조항 수·시행일이 두 언어에서
+같은지는 `tests/test_routing.py`가 확인한다).
+
+**Vernissage**: 원본이 앱 백엔드에 있다. 홈페이지는 기존 공개 URL을 유지한 채 해당 문서를 프록시하므로,
+앱 백엔드에서 문서를 배포하면 홈페이지를 다시 배포하지 않아도 최신 원문이 반영된다. 문서와 오류 응답은
+캐시하지 않는다. API는 공개 웹 공유 토큰으로 보호하며, 운영 환경에서는 아래 한 쌍을 같은 무작위 값으로 설정한다.
 
 | 홈페이지 환경변수 | 앱 백엔드 환경변수 |
 |---|---|
 | `VERNISSAGE_API_BASE_URL`, `VERNISSAGE_PUBLIC_WEB_API_TOKEN` | `PUBLIC_WEB_API_TOKEN` |
-| `KEEPSAKE_API_BASE_URL`, `KEEPSAKE_PUBLIC_WEB_API_TOKEN` | `PUBLIC_WEB_API_TOKEN` |
 
-Keepsake 로컬 API 기본 포트는 `18020`이다. Keepsake도 Vernissage와 같이 한국어·영어 법률 문서를
-각각 제공하며, 일본어 홈페이지에서는 영어 문서를 안내한다.
+두 앱 모두 한국어·영어 법률 문서를 각각 제공하며, 일본어 홈페이지에서는 영어 문서를 안내한다.

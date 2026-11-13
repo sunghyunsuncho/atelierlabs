@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import date, datetime
 
 import httpx
 import pytest
@@ -203,12 +204,11 @@ def test_vernissage_legal_pages(monkeypatch, path):
     ("host", "path"),
     [
         ("vernissage.localhost:8000", "/legal/terms-of-service"),
-        ("keepsake.localhost:8000", "/legal/privacy-policy"),
+        ("vernissage.localhost:8000", "/en/legal/privacy-policy"),
     ],
 )
 def test_unconfigured_legal_document_apis_are_not_cached(monkeypatch, host, path):
     monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "")
-    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "")
 
     res = get(path, host)
 
@@ -290,7 +290,7 @@ def test_internal_links_resolve():
                 res = get(href.split("?")[0], target_host)
                 is_unconfigured_legal_document = (
                     res.status_code == 503
-                    and target_host in ("vernissage.atelierlabs.co.kr", "keepsake.atelierlabs.co.kr")
+                    and target_host == "vernissage.atelierlabs.co.kr"
                     and href.split("?", 1)[0]
                     in (
                         "/legal/terms-of-service",
@@ -785,42 +785,64 @@ def test_legal_documents_are_proxied_from_the_owning_backend(monkeypatch):
 
     monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
     monkeypatch.setattr(main, "VERNISSAGE_PUBLIC_WEB_API_TOKEN", "vern-token")
-    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "http://keepsake-api:8010")
-    monkeypatch.setattr(main, "KEEPSAKE_PUBLIC_WEB_API_TOKEN", "keep-token")
     monkeypatch.setattr(main.httpx, "AsyncClient", StubClient)
 
     vernissage = get("/en/legal/privacy-policy", "vernissage.localhost:8000")
-    keepsake = get("/legal/terms-of-service", "keepsake.localhost:8000")
-    keepsake_en = get("/en/legal/privacy-policy", "keepsake.localhost:8000")
+    vernissage_ko = get("/legal/terms-of-service", "vernissage.localhost:8000")
 
-    assert vernissage.status_code == keepsake.status_code == keepsake_en.status_code == 200
-    assert (
-        vernissage.headers["cache-control"]
-        == keepsake.headers["cache-control"]
-        == keepsake_en.headers["cache-control"]
-        == "no-store"
-    )
-    assert (
-        vernissage.headers["content-type"]
-        == keepsake.headers["content-type"]
-        == keepsake_en.headers["content-type"]
-        == "text/html"
-    )
-    assert vernissage.text == keepsake.text == keepsake_en.text == "<h1>Current legal document</h1>"
+    assert vernissage.status_code == vernissage_ko.status_code == 200
+    assert vernissage.headers["cache-control"] == vernissage_ko.headers["cache-control"] == "no-store"
+    assert vernissage.headers["content-type"] == "text/html"
+    assert vernissage.text == "<h1>Current legal document</h1>"
     assert seen == [
         (
             "http://vernissage-api:8000/public-web/legal/en/privacy-policy",
             {"Accept": "text/html", "X-Public-Web-Token": "vern-token"},
         ),
         (
-            "http://keepsake-api:8010/public-web/legal/ko/terms-of-service",
-            {"Accept": "text/html", "X-Public-Web-Token": "keep-token"},
-        ),
-        (
-            "http://keepsake-api:8010/public-web/legal/en/privacy-policy",
-            {"Accept": "text/html", "X-Public-Web-Token": "keep-token"},
+            "http://vernissage-api:8000/public-web/legal/ko/terms-of-service",
+            {"Accept": "text/html", "X-Public-Web-Token": "vern-token"},
         ),
     ]
+
+
+@pytest.mark.parametrize(
+    ("path", "lang"),
+    [
+        ("/legal/terms-of-service", "ko"),
+        ("/legal/privacy-policy", "ko"),
+        ("/en/legal/terms-of-service", "en"),
+        ("/en/legal/privacy-policy", "en"),
+    ],
+)
+def test_keepsake_legal_documents_are_static_pages(monkeypatch, path, lang):
+    """Keepsake 약관은 이 저장소의 sites/keepsake/legal/이 원본이다. 앱 백엔드를 부르지 않는다."""
+
+    def no_upstream(*args, **kwargs):
+        raise AssertionError("Keepsake legal documents must not be proxied")
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", no_upstream)
+
+    res = get(path, "keepsake.atelierlabs.co.kr")
+
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("text/html")
+    assert f'<html lang="{lang}">' in res.text
+    assert f'<link rel="canonical" href="https://keepsake.atelierlabs.co.kr{path}" />' in res.text
+
+
+@pytest.mark.parametrize("document", ["terms-of-service", "privacy-policy"])
+def test_keepsake_korean_and_english_legal_documents_match(document):
+    """영어판은 직역이 아니어도 조항 수·표 수·시행일은 한국어판과 같아야 한다."""
+    ko = (main.SITES_DIR / "keepsake" / "legal" / f"{document}.html").read_text(encoding="utf-8")
+    en = (main.SITES_DIR / "keepsake" / "en" / "legal" / f"{document}.html").read_text(encoding="utf-8")
+
+    assert ko.count("<h2>") == en.count("<h2>")
+    assert ko.count("<table>") == en.count("<table>")
+    ko_date = re.search(r"시행일: (\d{4})년 (\d{1,2})월 (\d{1,2})일", ko)
+    en_date = re.search(r"Effective [Dd]ate: (\w+ \d{1,2}, \d{4})", en)
+    assert ko_date and en_date
+    assert date(*map(int, ko_date.groups())) == datetime.strptime(en_date[1], "%B %d, %Y").date()
 
 
 def test_unavailable_legal_document_api_is_not_cached(monkeypatch):
@@ -837,10 +859,10 @@ def test_unavailable_legal_document_api_is_not_cached(monkeypatch):
         async def get(self, url, headers):
             raise httpx.ConnectError("backend is unavailable")
 
-    monkeypatch.setattr(main, "KEEPSAKE_API_BASE_URL", "http://keepsake-api:8010")
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
     monkeypatch.setattr(main.httpx, "AsyncClient", UnavailableClient)
 
-    res = get("/legal/privacy-policy", "keepsake.localhost:8000")
+    res = get("/legal/privacy-policy", "vernissage.localhost:8000")
 
     assert res.status_code == 502
     assert res.headers["cache-control"] == "no-store"

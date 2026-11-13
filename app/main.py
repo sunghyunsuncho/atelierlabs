@@ -14,7 +14,8 @@ http://vernissage.localhost:13000 처럼 열면 된다. 그 외 Host(localhost, 
 URL -> 파일 규칙 (sites/<site>/ 기준):
     /                     -> index.html
     일반 경로              -> 확장자 없는 정적 HTML 파일
-    /legal/...            -> 앱 백엔드가 소유한 법률 문서 프록시
+    /legal/...            -> Vernissage는 앱 백엔드가 소유한 법률 문서 프록시,
+                             Keepsake는 sites/keepsake/legal/의 정적 HTML
     /assets/icon.png      -> assets/icon.png
     /shared/...           -> sites/shared/ 아래 공통 정적 자산
 
@@ -73,8 +74,6 @@ VERNISSAGE_APP_ONLY_PREFIXES = ("museums", "artworks", "artists", "art-concepts"
 # keytool/Play Console 형식: 콜론으로 구분한 32바이트 16진수(대문자).
 SHA256_CERT_FINGERPRINT = re.compile(r"(?:[0-9A-F]{2}:){31}[0-9A-F]{2}")
 APPLE_TEAM_ID = re.compile(r"[A-Z0-9]{10}")
-KEEPSAKE_API_BASE_URL = os.environ.get("KEEPSAKE_API_BASE_URL", "").rstrip("/")
-KEEPSAKE_PUBLIC_WEB_API_TOKEN = os.environ.get("KEEPSAKE_PUBLIC_WEB_API_TOKEN", "")
 
 # 서브도메인 이름 -> sites/ 아래 디렉터리. 루트 도메인은 "" 키.
 SITES: dict[str, str] = {
@@ -378,9 +377,13 @@ async def _upstream_get(request: Request, url: httpx.URL, headers: dict[str, str
 def _legal_document_request(site: str, url_path: str) -> tuple[str, str, str] | None:
     """법률 문서 URL을 해당 앱 백엔드의 공개 문서 API 요청으로 바꾼다.
 
-    홈페이지는 URL과 페이지 외관만 맡고, 실제 약관 원문은 각 앱 백엔드가 소유한다.
+    Vernissage 약관 원문은 앱 백엔드가 소유한다. Keepsake 약관은 이 저장소의
+    sites/keepsake/legal/이 원본이라 프록시하지 않고 정적 파일로 보여준다.
     일본어 법률 문서는 기존처럼 영어판으로 리다이렉트된 뒤 이 함수에 도달한다.
     """
+    if site != "vernissage":
+        return None
+
     language = "ko"
     document_path = url_path
     if document_path.startswith("en/"):
@@ -390,12 +393,7 @@ def _legal_document_request(site: str, url_path: str) -> tuple[str, str, str] | 
     if document_path not in ("legal/terms-of-service", "legal/privacy-policy"):
         return None
     document = document_path.rsplit("/", 1)[1]
-
-    if site == "vernissage":
-        return (VERNISSAGE_API_BASE_URL, VERNISSAGE_PUBLIC_WEB_API_TOKEN, f"legal/{language}/{document}")
-    if site == "keepsake":
-        return (KEEPSAKE_API_BASE_URL, KEEPSAKE_PUBLIC_WEB_API_TOKEN, f"legal/{language}/{document}")
-    return None
+    return (VERNISSAGE_API_BASE_URL, VERNISSAGE_PUBLIC_WEB_API_TOKEN, f"legal/{language}/{document}")
 
 
 async def _proxy_legal_document(request: Request, site: str, url_path: str) -> Response | None:
