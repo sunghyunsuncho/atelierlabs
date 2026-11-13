@@ -51,8 +51,8 @@ def test_unknown_subdomain_404():
 
 
 # AdMob은 스토어 마케팅 URL 도메인에서 app-ads.txt를 찾는다. 하위 도메인이면 루트 도메인을
-# 볼 수도 있어 Vernissage 서브도메인과 루트 도메인 양쪽에 같은 줄을 둔다.
-@pytest.mark.parametrize("host", ["vernissage.atelierlabs.co.kr", "atelierlabs.co.kr"])
+# 볼 수도 있어 앱 서브도메인(Vernissage, Keepsake)과 루트 도메인 모두에 같은 줄을 둔다.
+@pytest.mark.parametrize("host", ["vernissage.atelierlabs.co.kr", "keepsake.atelierlabs.co.kr", "atelierlabs.co.kr"])
 @pytest.mark.parametrize("method", ["GET", "HEAD"])
 def test_app_ads_txt(host, method):
     res = client.request(method, "/app-ads.txt", headers={"host": host}, follow_redirects=False)
