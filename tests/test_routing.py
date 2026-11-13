@@ -811,8 +811,10 @@ def test_legal_documents_are_proxied_from_the_owning_backend(monkeypatch):
     [
         ("/legal/terms-of-service", "ko"),
         ("/legal/privacy-policy", "ko"),
+        ("/legal/account-deletion", "ko"),
         ("/en/legal/terms-of-service", "en"),
         ("/en/legal/privacy-policy", "en"),
+        ("/en/legal/account-deletion", "en"),
     ],
 )
 def test_keepsake_legal_documents_are_static_pages(monkeypatch, path, lang):
@@ -843,6 +845,19 @@ def test_keepsake_korean_and_english_legal_documents_match(document):
     en_date = re.search(r"Effective [Dd]ate: (\w+ \d{1,2}, \d{4})", en)
     assert ko_date and en_date
     assert date(*map(int, ko_date.groups())) == datetime.strptime(en_date[1], "%B %d, %Y").date()
+
+
+def test_keepsake_korean_and_english_account_deletion_pages_match():
+    """계정 삭제 안내도 영어판의 항목 수·목록 수·수정일이 한국어판과 같아야 한다."""
+    ko = (main.SITES_DIR / "keepsake" / "legal" / "account-deletion.html").read_text(encoding="utf-8")
+    en = (main.SITES_DIR / "keepsake" / "en" / "legal" / "account-deletion.html").read_text(encoding="utf-8")
+
+    assert ko.count("<h2>") == en.count("<h2>")
+    assert ko.count("<li>") == en.count("<li>")
+    ko_date = re.search(r"최종 수정일: (\d{4}-\d{2}-\d{2})", ko)
+    en_date = re.search(r"Last updated: (\w+ \d{1,2}, \d{4})", en)
+    assert ko_date and en_date
+    assert date.fromisoformat(ko_date[1]) == datetime.strptime(en_date[1], "%B %d, %Y").date()
 
 
 def test_unavailable_legal_document_api_is_not_cached(monkeypatch):
