@@ -147,6 +147,9 @@ a.lang-option:hover { background: rgba(21, 21, 21, .05); color: var(--coral); }
 /* 라벨과 설명을 별도 열로 나눠, 설명이 줄바꿈되어도 라벨 아래로 파고들지 않게 한다 */
 .points li { display: grid; grid-template-columns: 5.8em minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.6; }
 .points li strong { color: var(--blue); white-space: nowrap; }
+/* 앱 소개 문구는 낱말·구 단위로만 줄바꿈한다 */
+:lang(ko) :is(.showcase .desc, .points li) { word-break: keep-all; }
+:lang(ja) :is(.showcase .desc, .points li) { word-break: auto-phrase; }
 .showcase-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .store-badge {
   display: inline-flex; align-items: center; gap: 10px;
