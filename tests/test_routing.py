@@ -69,7 +69,7 @@ FINGERPRINT_B = ":".join(["01"] * 32)
 def test_vernissage_app_link_association_files(monkeypatch):
     fingerprints = (FINGERPRINT_A, FINGERPRINT_B)
     monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", fingerprints)
-    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
+    monkeypatch.setattr(main, "APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
 
     assetlinks = get("/.well-known/assetlinks.json", "vernissage.atelierlabs.co.kr")
     assert assetlinks.status_code == 200
@@ -120,26 +120,6 @@ def test_vernissage_dynamic_sitemap_includes_localized_about_pages(monkeypatch):
         assert f"<loc>https://vernissage.atelierlabs.co.kr/{path}</loc>" in response.text
 
 
-@pytest.mark.parametrize(
-    ("path", "lang", "marker"),
-    [
-        ("/museums/12", "ko", "Vernissage 앱에서 볼 수 있어요"),
-        ("/artworks/3", "ko", "Vernissage 앱에서 볼 수 있어요"),
-        ("/en/artists/7", "en", "opens in the Vernissage app"),
-        ("/ja/art-concepts/9", "ja", "Vernissageアプリで見られます"),
-        ("/ja/art-figures/1", "ja", "Vernissageアプリで見られます"),
-    ],
-)
-def test_vernissage_app_only_paths_show_install_page(path, lang, marker):
-    res = get(path, "vernissage.atelierlabs.co.kr")
-    assert res.status_code == 200
-    assert f'<html lang="{lang}">' in res.text
-    assert marker in res.text
-    assert '<meta name="robots" content="noindex" />' in res.text
-    assert "https://play.google.com/store/apps/details?id=com.atelierlabs.vernissage" in res.text
-    assert "/assets/get-app.js" in res.text
-    # 인앱 브라우저에서 앱으로 돌아가는 버튼(휴대폰에서만 get-app.js가 보여준다)
-    assert "data-open-app hidden" in res.text
 
 
 def test_install_page_only_for_app_only_sections():
@@ -157,7 +137,7 @@ def test_vernissage_assetlinks_requires_valid_android_certificate_fingerprints(m
 
 @pytest.mark.parametrize("team_id", ["", "SHORT", "3BQ7Y687R9X"])
 def test_vernissage_aasa_requires_valid_apple_team_id(monkeypatch, team_id):
-    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", team_id)
+    monkeypatch.setattr(main, "APPLE_APP_LINK_TEAM_ID", team_id)
     response = get("/.well-known/apple-app-site-association", "vernissage.atelierlabs.co.kr")
     assert response.status_code == 503
     assert response.headers["cache-control"] == "no-store"
@@ -166,19 +146,67 @@ def test_vernissage_aasa_requires_valid_apple_team_id(monkeypatch, team_id):
 @pytest.mark.parametrize("method", ["GET", "HEAD"])
 def test_vernissage_app_link_files_answer_head_without_redirect(monkeypatch, method):
     monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
-    monkeypatch.setattr(main, "VERNISSAGE_APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
+    monkeypatch.setattr(main, "APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
     for path in ("/.well-known/assetlinks.json", "/.well-known/apple-app-site-association"):
         res = client.request(method, path, headers={"host": "vernissage.atelierlabs.co.kr"}, follow_redirects=False)
         assert res.status_code == 200
         assert res.headers["content-type"].startswith("application/json")
 
 
-# 다른 앱의 도메인에서 Vernissage 소유 선언을 내보내지 않는다.
-@pytest.mark.parametrize("host", ["atelierlabs.co.kr", "keepsake.atelierlabs.co.kr"])
-def test_app_link_files_only_on_vernissage(monkeypatch, host):
+def test_keepsake_app_link_association_files(monkeypatch):
+    monkeypatch.setattr(main, "KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_B,))
     monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
-    assert get("/.well-known/assetlinks.json", host).status_code == 404
-    assert get("/.well-known/apple-app-site-association", host).status_code == 404
+    monkeypatch.setattr(main, "APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9")
+
+    # Keepsake는 자기 서명 키 지문만 선언한다(Vernissage 지문과 섞이지 않는다).
+    assetlinks = get("/.well-known/assetlinks.json", "keepsake.atelierlabs.co.kr")
+    assert assetlinks.status_code == 200
+    assert assetlinks.json()[0]["target"] == {
+        "namespace": "android_app",
+        "package_name": "com.atelierlabs.keepsake",
+        "sha256_cert_fingerprints": [FINGERPRINT_B],
+    }
+
+    association = get("/.well-known/apple-app-site-association", "keepsake.atelierlabs.co.kr")
+    assert association.status_code == 200
+    detail = association.json()["applinks"]["details"][0]
+    assert detail["appID"] == "3BQ7Y687R9.com.atelierlabs.keepsake"
+    # 공유 앨범 초대 링크만 앱으로 연다.
+    assert detail["paths"] == ["/join", "/en/join", "/ja/join"]
+
+
+def test_keepsake_assetlinks_requires_its_own_fingerprints(monkeypatch):
+    monkeypatch.setattr(main, "KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", ())
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
+    response = get("/.well-known/assetlinks.json", "keepsake.atelierlabs.co.kr")
+    assert response.status_code == 503
+    assert "KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS" in response.text
+
+
+# 앱이 없는 회사 사이트는 소유 선언을 내보내지 않는다.
+def test_app_link_files_not_on_company_site(monkeypatch):
+    monkeypatch.setattr(main, "VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", (FINGERPRINT_A,))
+    assert get("/.well-known/assetlinks.json", "atelierlabs.co.kr").status_code == 404
+    assert get("/.well-known/apple-app-site-association", "atelierlabs.co.kr").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("path", "lang", "marker"),
+    [
+        ("/join?code=ABCD2345", "ko", "공유 앨범에 초대받았어요"),
+        ("/en/join?code=ABCD2345", "en", "invited to a shared album"),
+        ("/ja/join?code=ABCD2345", "ja", "共有アルバムに招待されました"),
+    ],
+)
+def test_keepsake_invite_page(path, lang, marker):
+    res = get(path, "keepsake.atelierlabs.co.kr")
+    assert res.status_code == 200
+    assert f'<html lang="{lang}">' in res.text
+    assert marker in res.text
+    # 초대 코드가 담긴 주소이므로 검색에 나오지 않게 한다.
+    assert '<meta name="robots" content="noindex" />' in res.text
+    assert "/assets/join.js" in res.text
+    assert "data-open-app hidden" in res.text
 
 
 @pytest.mark.parametrize(

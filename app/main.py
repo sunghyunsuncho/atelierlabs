@@ -46,16 +46,24 @@ SHARED_DIR = (SITES_DIR / "shared").resolve()
 # 주소나 PUBLIC_WEB_API_TOKEN을 노출하지 않는다.
 VERNISSAGE_API_BASE_URL = os.environ.get("VERNISSAGE_API_BASE_URL", "").rstrip("/")
 VERNISSAGE_PUBLIC_WEB_API_TOKEN = os.environ.get("VERNISSAGE_PUBLIC_WEB_API_TOKEN", "")
+
+
+def _env_fingerprints(name: str) -> tuple[str, ...]:
+    return tuple(
+        fingerprint.strip().upper() for fingerprint in os.environ.get(name, "").split(",") if fingerprint.strip()
+    )
+
+
 # Android App Links는 Google Play 앱 서명 인증서의 SHA-256 지문을 요구한다. 업로드 키는
-# 서명 키와 다를 수 있으므로 저장소에 고정하지 않고 Railway 환경 변수에서 받는다.
-VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS = tuple(
-    fingerprint.strip().upper()
-    for fingerprint in os.environ.get("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS", "").split(",")
-    if fingerprint.strip()
+# 서명 키와 다를 수 있으므로 저장소에 고정하지 않고 Railway 환경 변수에서 받는다. 앱마다 서명 키가 다르다.
+VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS = _env_fingerprints("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS")
+KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS = _env_fingerprints(
+    "KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS"
 )
-# Apple Team ID는 공개 식별자지만, 환경별로 바꿀 여지를 위해 변수로 둔다.
-VERNISSAGE_APPLE_APP_LINK_TEAM_ID = os.environ.get("APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9").strip().upper()
+# Apple Team ID는 공개 식별자지만, 환경별로 바꿀 여지를 위해 변수로 둔다. 두 앱이 같은 팀에 있다.
+APPLE_APP_LINK_TEAM_ID = os.environ.get("APPLE_APP_LINK_TEAM_ID", "3BQ7Y687R9").strip().upper()
 VERNISSAGE_APP_ID = "com.atelierlabs.vernissage"
+KEEPSAKE_APP_ID = "com.atelierlabs.keepsake"
 # mobile/app.json의 Android intentFilters와 같은 경로를 유지한다. 앱에는 상세 화면만 있으므로
 # 목록(/exhibitions 등)은 웹에 남기고 상세(/exhibitions/<id>)만 앱으로 연다. 언어 접두사는
 # 앱의 +native-intent.tsx가 떼어낸다.
@@ -96,6 +104,9 @@ LANGS = ("en", "ja")
 VERNISSAGE_APP_LINK_PATHS = tuple(
     f"/{lang}{prefix}/?*" for lang in ("", *(f"{code}/" for code in LANGS)) for prefix in VERNISSAGE_APP_LINK_PREFIXES
 )
+# Keepsake는 공유 앨범 초대 링크(/join?code=…)만 앱으로 연다. mobile/app.json의 Android intentFilters와
+# 같은 경로다. 앱이 없으면 join.html이 초대 코드와 참여 방법을 보여준다.
+KEEPSAKE_APP_LINK_PATHS = tuple(f"/{lang}join" for lang in ("", *(f"{code}/" for code in LANGS)))
 
 # Vernissage 공개 데이터 화면은 하나의 작은 클라이언트 앱이 목록·상세 경로를 모두 렌더링한다.
 # 정적 파일 규칙으로는 /exhibitions/123 같은 동적 상세 경로를 찾을 수 없어서 여기서 shell을 준다.
@@ -213,31 +224,46 @@ def _local_origin_rewriter(request: Request):
     return lambda html: pattern.sub(lambda m: f"http://{m.group(1)}{suffix}", html)
 
 
-def _vernissage_app_link_association(url_path: str) -> Response | None:
-    """Vernissage App Links/Universal Links 도메인 소유 선언을 반환한다.
+def _app_link_association(site: str, url_path: str) -> Response | None:
+    """앱 사이트(Vernissage·Keepsake)의 App Links/Universal Links 도메인 소유 선언을 반환한다.
 
     검증 파일은 리다이렉트 없이 HTTPS 루트의 ``/.well-known/``에서 제공해야 한다.
     설정이 없거나 형식이 틀린 배포를 성공처럼 보이지 않게 503으로 명시한다.
     """
+    # 지문은 테스트가 바꿔 끼울 수 있게 요청 때 모듈 변수에서 읽는다.
+    if site == "vernissage":
+        app_id, paths = VERNISSAGE_APP_ID, VERNISSAGE_APP_LINK_PATHS
+        fingerprints, fingerprints_env = (
+            VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS,
+            "ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS",
+        )
+    elif site == "keepsake":
+        app_id, paths = KEEPSAKE_APP_ID, KEEPSAKE_APP_LINK_PATHS
+        fingerprints, fingerprints_env = (
+            KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS,
+            "KEEPSAKE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS",
+        )
+    else:
+        return None
+
     if url_path == ".well-known/assetlinks.json":
-        fingerprints = VERNISSAGE_ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS
         if not fingerprints:
-            return _misconfigured("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS is not configured")
+            return _misconfigured(f"{fingerprints_env} is not configured")
         # 형식이 틀린 지문이 하나라도 섞이면 검증이 조용히 실패하므로 전체를 거부한다.
         if not all(SHA256_CERT_FINGERPRINT.fullmatch(fingerprint) for fingerprint in fingerprints):
-            return _misconfigured("ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS is invalid")
+            return _misconfigured(f"{fingerprints_env} is invalid")
         body: object = [
             {
                 "relation": ["delegate_permission/common.handle_all_urls"],
                 "target": {
                     "namespace": "android_app",
-                    "package_name": VERNISSAGE_APP_ID,
+                    "package_name": app_id,
                     "sha256_cert_fingerprints": list(fingerprints),
                 },
             }
         ]
     elif url_path == ".well-known/apple-app-site-association":
-        team_id = VERNISSAGE_APPLE_APP_LINK_TEAM_ID
+        team_id = APPLE_APP_LINK_TEAM_ID
         if not team_id:
             return _misconfigured("APPLE_APP_LINK_TEAM_ID is not configured")
         if not APPLE_TEAM_ID.fullmatch(team_id):
@@ -247,8 +273,8 @@ def _vernissage_app_link_association(url_path: str) -> Response | None:
                 "apps": [],
                 "details": [
                     {
-                        "appID": f"{team_id}.{VERNISSAGE_APP_ID}",
-                        "paths": list(VERNISSAGE_APP_LINK_PATHS),
+                        "appID": f"{team_id}.{app_id}",
+                        "paths": list(paths),
                     }
                 ],
             }
@@ -1121,7 +1147,7 @@ async def serve(request: Request, url_path: str) -> Response:
     if site == "vernissage" and url_path == "sitemap.xml" and (sitemap := await _vernissage_dynamic_sitemap(request)):
         return sitemap
 
-    if site == "vernissage" and (association := _vernissage_app_link_association(url_path)):
+    if association := _app_link_association(site, url_path):
         return association
 
     # 브라우저가 <link rel="icon"> 없이도 루트에서 찾는 파일들
