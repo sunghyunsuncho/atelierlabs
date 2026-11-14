@@ -120,6 +120,26 @@ def test_vernissage_dynamic_sitemap_includes_localized_about_pages(monkeypatch):
         assert f"<loc>https://vernissage.atelierlabs.co.kr/{path}</loc>" in response.text
 
 
+@pytest.mark.parametrize(
+    ("path", "lang", "marker"),
+    [
+        ("/museums/12", "ko", "Vernissage 앱에서 볼 수 있어요"),
+        ("/artworks/3", "ko", "Vernissage 앱에서 볼 수 있어요"),
+        ("/en/artists/7", "en", "opens in the Vernissage app"),
+        ("/ja/art-concepts/9", "ja", "Vernissageアプリで見られます"),
+        ("/ja/art-figures/1", "ja", "Vernissageアプリで見られます"),
+    ],
+)
+def test_vernissage_app_only_paths_show_install_page(path, lang, marker):
+    res = get(path, "vernissage.atelierlabs.co.kr")
+    assert res.status_code == 200
+    assert f'<html lang="{lang}">' in res.text
+    assert marker in res.text
+    assert '<meta name="robots" content="noindex" />' in res.text
+    assert "https://play.google.com/store/apps/details?id=com.atelierlabs.vernissage" in res.text
+    assert "/assets/get-app.js" in res.text
+    # 인앱 브라우저에서 앱으로 돌아가는 버튼(휴대폰에서만 get-app.js가 보여준다)
+    assert "data-open-app hidden" in res.text
 
 
 def test_install_page_only_for_app_only_sections():
