@@ -157,6 +157,14 @@ main > section > h2::before { content: counter(home-section, decimal-leading-zer
 .faq details[open] summary::after { content: "−"; }
 .faq details p { max-width: 590px; margin: 10px 0 0; color: #4a4a4a; font-size: 15px; }
 
+/* 앱 둘러보기 — 스토어 스크린샷(keepsake/store-assets/output/playstore)을 675x1200 JPG로 줄여 가로로 넘긴다. 베르니사주 갤러리와 같은 모양 */
+.gallery-section h2 { margin: 0 0 clamp(40px, 5vw, 64px); }
+.gallery { display: flex; gap: clamp(14px, 2vw, 28px); overflow-x: auto; padding: 0 0 18px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.gallery::-webkit-scrollbar { height: 6px; }
+.gallery::-webkit-scrollbar-thumb { background: var(--line-strong); }
+.gallery img { flex: 0 0 auto; width: auto; height: min(52vw, 600px); scroll-snap-align: start; border: 1px solid var(--line); }
+@media (max-width: 760px) { .gallery img { height: 430px; } }
+
 /* 이용 등급 비교표 — 앱의 '이용 등급 안내'(mobile/src/app/plans.tsx)와 같은 내용 */
 #plans > h2 { margin: 0 0 20px; max-width: 600px; }
 .plans-lead { max-width: 620px; margin: 0 0 clamp(40px, 5vw, 64px); color: #3a3a3a; font-size: clamp(16px, 1.45vw, 19px); }
