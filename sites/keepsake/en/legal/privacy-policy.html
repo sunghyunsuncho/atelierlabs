@@ -36,6 +36,7 @@
     <li>Shared Album captions and comments: the caption the person who added a photo writes for other members, and the comments members leave on photos, with the time they were posted</li>
     <li>Notification information: your push notification token, device type (iOS or Android) and the app language used for notification text</li>
     <li>Reporting and blocking information (Shared Albums): who made a report, the photo, comment or member reported, the reason and any details given, the Shared Album's name and the member's display name at the time of the report, the text of a reported comment, and how it was resolved; the users you block and their display names at the time</li>
+    <li>Usage activity: when you open the app, the screens you visit, and when and how often you use key features (such as signing in, keeping and cleaning up photos, creating albums, editing notes, subscribing, and creating or joining Shared Albums, adding photos and commenting), along with your device type (iOS or Android) and app version. This never includes the text of your notes, place names, album names, captions or comments.</li>
     <li>Information collected automatically: your storage usage and photo count, and, when the app encounters an error, your device model, OS version, app version and error details</li>
   </ul>
   <p><strong>Information kept only on your device (never sent to us)</strong></p>
@@ -60,9 +61,10 @@
     <tr><td>Reconnecting your entries to the original photos in your device's photo library after you reinstall the app</td><td>Photo link information</td></tr>
     <tr><td>Notifying you when your subscription ends, before your photos are deleted, and when someone comments on your photo in a Shared Album</td><td>Push notification token, device type, app language</td></tr>
     <tr><td>Showing ads and measuring ad performance (users who do not subscribe)</td><td>Advertising information</td></tr>
+    <tr><td>Understanding how the Service is used and improving it</td><td>Usage activity</td></tr>
     <tr><td>Troubleshooting errors and keeping the Service stable</td><td>Device information, error details</td></tr>
   </table>
-  <p>We never use your photos, notes, or Shared Album captions and comments for advertising, profiling or AI training, and we never sell them. Reported Shared Album photos and comments are viewed only by the staff who handle reports.</p>
+  <p>We never use your photos, notes, or Shared Album captions and comments for advertising, profiling or AI training, and we never sell them. We use usage activity only for our own usage statistics and to improve the Service, never for advertising, and we do not share it with anyone else. Reported Shared Album photos and comments are viewed only by the staff who handle reports.</p>
 
   <h2>3. Retention and Deletion</h2>
   <ul>
@@ -71,7 +73,8 @@
     <li>When you remove a photo from a Safe Album, we delete it from our servers if it is no longer in any Safe Album.</li>
     <li>Shared Album captions and comments are deleted when the person who wrote them deletes them (album admins can also delete comments), when the photo is removed from the album, or when the album is deleted. Comments stay if you leave a Shared Album, but if you remove your photos when you leave, or you are removed from the album, the comments you left in that album are deleted too.</li>
     <li>When your subscription ends, we delete only the photos on our servers, 30 days later. Your entries, albums, photo link information and account are kept until you delete your account.</li>
-    <li>When you delete your account, we immediately delete your entries, photos, Shared Album captions and comments, photo link information, account information, subscription information and push notification tokens from our servers, and we also delete your customer record at RevenueCat.</li>
+    <li>When you delete your account, we immediately delete your entries, photos, Shared Album captions and comments, photo link information, account information, subscription information, push notification tokens and usage activity from our servers, and we also delete your customer record at RevenueCat.</li>
+    <li>We keep usage activity for 180 days from the date it is recorded and then delete it automatically.</li>
     <li>We keep report records for 1 year after a report is resolved and then delete them automatically. We keep them so we can tell whether the same user keeps breaking the rules, so they are kept for this period even if the reporting or reported user deletes their account (a deleted reporter is no longer linked to the report). Blocking information is deleted when you unblock someone or delete your account.</li>
     <li>Signing out deletes only that device's push notification token. The rest of your information stays on our servers, so you can pick up where you left off when you sign in again.</li>
     <li>Where the law requires us to keep certain information, we keep it for the required period. Under the Korean Act on the Consumer Protection in Electronic Commerce, records of contracts, cancellations, payments and the supply of goods are kept for 5 years, and records of consumer complaints and dispute resolution for 3 years. For this reason, payment event records are kept for 5 years from the date we receive them, even after you delete your account, and are then deleted automatically.</li>
@@ -132,7 +135,7 @@
     <tr><td>Google LLC (AdMob)</td><td>United States</td><td>Advertising information</td><td>Showing ads and measuring ad performance</td></tr>
     <tr><td>650 Industries, Inc. (Expo)</td><td>United States</td><td>Push notification tokens, device type, notification titles and content</td><td>Relaying app push notifications</td></tr>
     <tr><td>RevenueCat, Inc.</td><td>United States</td><td>Account identifier (a random ID we generate), purchase history</td><td>Verifying subscription status</td></tr>
-    <tr><td>Railway Inc.</td><td>Singapore</td><td>Account information, entries, albums, Shared Album captions and comments, subscription information, photo link information, notification information, reporting and blocking information</td><td>Server hosting and data storage</td></tr>
+    <tr><td>Railway Inc.</td><td>Singapore</td><td>Account information, entries, albums, Shared Album captions and comments, subscription information, photo link information, notification information, reporting and blocking information, usage activity</td><td>Server hosting and data storage</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Cloudflare data centers, including in the United States</td><td>Photos in Safe Albums (originals and viewing copies)</td><td>Storing and serving photos (R2 Object Storage)</td></tr>
     <tr><td>Sentry (Functional Software, Inc.)</td><td>United States</td><td>Device information (OS, device model, app version), technical logs from the time of an error, and the account identifier for server errors</td><td>Collecting app error and crash reports and improving the stability of the Service</td></tr>
   </table>
