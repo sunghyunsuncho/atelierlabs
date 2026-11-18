@@ -595,6 +595,9 @@ def _render_docent_content(content: object) -> str:
     return DOCENT_IMAGE_GROUP.sub(group_images, "".join(rendered))
 
 
+VERNISSAGE_DEFAULT_SHARE_IMAGE = "assets/hero-2.png"  # 홈페이지 og:image와 같은 사이트 대표 이미지
+
+
 def _public_url(path: str) -> str:
     return f"https://vernissage.{ROOT_DOMAIN}/{path.lstrip('/')}"
 
@@ -688,20 +691,25 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
     )
     description = _seo_text(_docent_plain_text(description_source) if section == "docent/notes" else description_source)
     image = item.get("thumbnail_url") or item.get("image_url") or series.get("thumbnail_url")
+    # Google Event·Article 구조화 데이터는 image를 권장 항목으로 본다. 이미지가 없는 콘텐츠(예: 포스터 미수집
+    # 비엔날레)는 구조화 데이터·og:image에만 사이트 대표 이미지를 쓰고, 본문에는 이미지를 넣지 않는다.
+    share_image = image or _public_url(VERNISSAGE_DEFAULT_SHARE_IMAGE)
     if section == "docent/notes":
         content = item.get("content") or item.get("excerpt") or ""
-        schema = {
-            "@context": "https://schema.org",
-            "@type": "Article",
-            "headline": title,
-            "description": description,
-            "image": image,
-            "datePublished": item.get("published_at"),
-            "mainEntityOfPage": _public_url(url_path),
-        }
+        schema = _drop_empty(
+            {
+                "@context": "https://schema.org",
+                "@type": "Article",
+                "headline": title,
+                "description": description,
+                "image": share_image,
+                "datePublished": item.get("published_at"),
+                "mainEntityOfPage": _public_url(url_path),
+            }
+        )
     else:
         content = item.get("description") or series.get("description") or ""
-        schema = _event_schema(section, item, series, title, description, image, _public_url(url_path))
+        schema = _event_schema(section, item, series, title, description, share_image, _public_url(url_path))
     content_html = (
         _render_docent_content(content)
         if section == "docent/notes"
@@ -720,7 +728,7 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
         )
     )
     return HTMLResponse(
-        _render_vernissage_detail_shell(site_dir, language, url_path, title, description, body, image, schema),
+        _render_vernissage_detail_shell(site_dir, language, url_path, title, description, body, share_image, schema),
         headers={"Cache-Control": HTML_CACHE},
     )
 

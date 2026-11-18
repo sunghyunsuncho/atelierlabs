@@ -662,6 +662,53 @@ def test_vernissage_art_event_structured_data_has_a_location(monkeypatch):
     assert None not in schema.values()
 
 
+def test_vernissage_art_event_without_an_image_uses_the_site_image(monkeypatch):
+    """실제 /ja/art-events/184 응답 기반: 회차·시리즈 모두 이미지가 없으면 Search Console이
+    'image 누락' 경고를 낸다. 구조화 데이터·og:image에는 사이트 대표 이미지를 쓰고 본문에는 넣지 않는다."""
+
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "event": {
+                    "id": 184,
+                    "display_title": "18th Biennale de Lyon",
+                    "start_date": "2026-09-19",
+                    "end_date": "2026-12-13",
+                    "city": "리옹",
+                    "country": "프랑스",
+                    "country_code": "FR",
+                    "image_url": None,
+                    "venues": [],
+                    "series": {"organizer": "Biennale de Lyon", "thumbnail_url": None},
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get("/ja/art-events/184", "vernissage.localhost:8000")
+    schema = _json_ld(res.text)
+    assert schema["@type"] == "Event"
+    assert schema["image"] == main._public_url("assets/hero-2.png")
+    assert f'<meta property="og:image" content="{schema["image"]}" />' in res.text
+    assert 'class="detail-image"' not in res.text
+    assert schema["eventStatus"] == "https://schema.org/EventScheduled"
+    assert schema["organizer"] == {"@type": "Organization", "name": "Biennale de Lyon"}
+
+
+def test_vernissage_docent_note_without_a_publish_date_has_no_null_fields(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(200, json={"note": {"title": "Undated story", "content": "Body"}})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    schema = _json_ld(get("/docent/notes/36", "vernissage.localhost:8000").text)
+    assert schema["@type"] == "Article"
+    assert schema["image"] == main._public_url("assets/hero-2.png")
+    assert None not in schema.values()
+
+
 def test_vernissage_event_without_a_place_is_not_an_invalid_event(monkeypatch):
     async def upstream(request, url, headers):
         return httpx.Response(200, json={"event": {"id": 7, "display_title": "Unknown fair", "series": {}}})
