@@ -697,6 +697,62 @@ def test_vernissage_art_event_without_an_image_uses_the_site_image(monkeypatch):
     assert schema["organizer"] == {"@type": "Organization", "name": "Biennale de Lyon"}
 
 
+def _exhibition_schema(monkeypatch, **fields) -> dict:
+    async def upstream(request, url, headers):
+        exhibition = {
+            "id": 5,
+            "title": "창원 현동 사람들 이야기",
+            "start_date": "2026-09-18",
+            "end_date": "2027-02-14",
+            "place_name": "국립김해박물관 기획전시실",
+            "institution_name": "국립김해박물관",
+            "homepage_url": "https://gimhae.museum.go.kr/exhibition/183",
+            "museum": {"name": "国立金海博物館", "city": "경상남도 김해시", "address": "경상남도 김해시 가야의길 190"},
+            **fields,
+        }
+        return httpx.Response(200, json={"indexable": True, "exhibition": exhibition})
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    return _json_ld(get("/ja/exhibitions/5", "vernissage.localhost:8000").text)
+
+
+def test_vernissage_free_exhibition_has_offers(monkeypatch):
+    """실제 /ja/exhibitions/5 응답 기반: 관람료 '무료' → price 0 Offer."""
+    schema = _exhibition_schema(monkeypatch, admission_fee="무료")
+    assert schema["offers"] == {
+        "@type": "Offer",
+        "price": 0,
+        "priceCurrency": "KRW",
+        "availability": "https://schema.org/InStock",
+        "url": "https://gimhae.museum.go.kr/exhibition/183",
+    }
+
+
+def test_vernissage_single_price_exhibition_has_offers(monkeypatch):
+    assert _exhibition_schema(monkeypatch, admission_fee="5,000원")["offers"]["price"] == 5000
+
+
+@pytest.mark.parametrize(
+    "fee",
+    [
+        None,
+        "",
+        "유료",
+        "무료 ~ 5,000원",
+        "성인 13,000원 / 청소년 · 어린이 10,000원",
+        "참가비 : 10,000원 (전시관람료 별도)",
+        "5,000원 (성인)",
+        "1,0000원",
+    ],
+)
+def test_vernissage_exhibition_with_unclear_fee_has_no_offers(monkeypatch, fee):
+    """요금이 없거나 해석이 갈리면 틀린 가격 대신 offers를 뺀다(박물관 기본 관람료도 쓰지 않는다)."""
+    museum = {"name": "M", "address": "A", "admission_fee_adult": "0"}
+    schema = _exhibition_schema(monkeypatch, admission_fee=fee, museum=museum)
+    assert "offers" not in schema
+
+
 def test_vernissage_docent_note_without_a_publish_date_has_no_null_fields(monkeypatch):
     async def upstream(request, url, headers):
         return httpx.Response(200, json={"note": {"title": "Undated story", "content": "Body"}})

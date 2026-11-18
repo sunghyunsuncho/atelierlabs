@@ -803,6 +803,31 @@ def _event_location(section: str, item: dict, series: dict) -> dict | None:
     }
 
 
+FREE_ADMISSION = re.compile(r"무료(?:\s*관람|\s*전시)?|0\s*원?")
+SINGLE_ADMISSION_PRICE = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+)\s*원?")
+
+
+def _exhibition_offers(item: dict, url: str) -> dict | None:
+    """전시 관람료를 Google Event의 offers로. 수집된 관람료 문구가 '무료'이거나 금액 하나뿐일 때만 쓴다.
+    연령별 요금·범위·'참가비(관람료 별도)'처럼 해석이 갈리는 문구나 관람료가 없는 전시는 offers를 넣지 않는다
+    (틀린 가격을 구조화 데이터로 내보내는 것보다 권장 항목 누락 경고가 낫다). 박물관 기본 관람료는 특별전
+    요금과 다를 수 있어 쓰지 않는다."""
+    fee = re.sub(r"\s+", " ", str(item.get("admission_fee") or "")).strip()
+    if FREE_ADMISSION.fullmatch(fee):
+        price = 0
+    elif match := SINGLE_ADMISSION_PRICE.fullmatch(fee):
+        price = int(match.group(1).replace(",", ""))
+    else:
+        return None
+    return {
+        "@type": "Offer",
+        "price": price,
+        "priceCurrency": "KRW",
+        "availability": "https://schema.org/InStock",
+        "url": item.get("homepage_url") or url,
+    }
+
+
 def _event_schema(
     section: str, item: dict, series: dict, title: str, description: str, image: object, url: str
 ) -> dict:
@@ -827,9 +852,11 @@ def _event_schema(
             "url": museum.get("website"),
         }
         event_type = "ExhibitionEvent"
+        offers = _exhibition_offers(item, url)
     else:
         organizer = {"@type": "Organization", "name": series.get("organizer")}
         event_type = "Event"
+        offers = None  # 아트이벤트는 티켓 가격 데이터가 없다.
     return _drop_empty(
         {
             "@context": "https://schema.org",
@@ -843,6 +870,7 @@ def _event_schema(
             "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
             "location": location,
             "organizer": organizer if organizer.get("name") else None,
+            "offers": offers,
             "url": url,
         }
     )
