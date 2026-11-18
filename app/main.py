@@ -828,6 +828,47 @@ def _exhibition_offers(item: dict, url: str) -> dict | None:
     }
 
 
+ARTIST_TEXT_SPLIT = re.compile(r"[,，、/·\n]+|\s+및\s+")
+# 이름 뒤 괄호(생몰년·인원수·영문 표기·"(단체전)" 등)는 쉼표로 나누기 전에 지운다. 괄호 안 쉼표로 이름이
+# 갈리지 않고("배운성 (1900, 서울)"), performer 이름에 "이응노(Lee Ungno)" 같은 덧붙임이 남지 않게 한다.
+ARTIST_TEXT_NOTE = re.compile(r"\([^()]*\)")
+# "폴 스트랜드 등", "김철수 외 3인"의 뒤꼬리. 숫자 없는 '등·외'는 이름 끝 글자와 헷갈리지 않게 앞 공백을 요구한다.
+ARTIST_TEXT_SUFFIX = re.compile(r"\s*(?:등|외)\s*\d+\s*(?:인|명)$|\s+(?:등|외)$")
+# 수집처 작가 칸에 섞여 들어오는 사람 이름이 아닌 값(예: "-", "개인(단체전)", "전시전경", "9인",
+# "국내․외 14명의 참여 작가", "성남큐브미술관"). '전시·전경'은 부분 일치로 거르면 "전경린", "전시우" 같은
+# 실제 이름까지 빠지므로 그 낱말만으로 된 값일 때만 거른다.
+NOT_AN_ARTIST = re.compile(
+    r"\d|작가|참여|미술관|갤러리|박물관|(?:개인|단체|기획|특별)전|^(?:개인|단체)|^(?:전시\s?)?전경$|^전시$|^[\W_]+$"
+)
+MAX_PERFORMERS = 20
+
+
+def _artist_names_from_text(text: object) -> list[str]:
+    if not isinstance(text, str):
+        return []
+    names = []
+    for part in ARTIST_TEXT_SPLIT.split(ARTIST_TEXT_NOTE.sub("", text)):
+        name = ARTIST_TEXT_SUFFIX.sub("", re.sub(r"\s+", " ", part).strip())
+        if name and len(name) <= 40 and not NOT_AN_ARTIST.search(name):
+            names.append(name)
+    return names
+
+
+def _event_performers(section: str, item: dict) -> list[dict] | None:
+    """Google Event의 performer(참여 작가). 작가 데이터에 연결된 작가를 먼저 쓰고, 전시는 없으면 수집된 작가
+    문구에서 이름만 골라 쓴다. 작가를 알 수 없으면 넣지 않는다(기획자·주최는 performer가 아니다)."""
+    linked = item.get("artist_links") if section == "exhibitions" else item.get("artists")
+    names = [
+        str(artist["name"]).strip()
+        for artist in (linked if isinstance(linked, list) else [])
+        if isinstance(artist, dict) and str(artist.get("name") or "").strip()
+    ]
+    if not names and section == "exhibitions":
+        names = _artist_names_from_text(item.get("artists"))
+    unique = list(dict.fromkeys(names))[:MAX_PERFORMERS]
+    return [{"@type": "Person", "name": name} for name in unique] or None
+
+
 def _event_schema(
     section: str, item: dict, series: dict, title: str, description: str, image: object, url: str
 ) -> dict:
@@ -870,6 +911,7 @@ def _event_schema(
             "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
             "location": location,
             "organizer": organizer if organizer.get("name") else None,
+            "performer": _event_performers(section, item),
             "offers": offers,
             "url": url,
         }

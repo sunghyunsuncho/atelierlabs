@@ -695,6 +695,33 @@ def test_vernissage_art_event_without_an_image_uses_the_site_image(monkeypatch):
     assert 'class="detail-image"' not in res.text
     assert schema["eventStatus"] == "https://schema.org/EventScheduled"
     assert schema["organizer"] == {"@type": "Organization", "name": "Biennale de Lyon"}
+    # 참여 작가·티켓 가격 데이터가 없는 회차는 performer·offers를 지어내지 않는다.
+    assert "performer" not in schema
+    assert "offers" not in schema
+
+
+def test_vernissage_art_event_performers_are_linked_artists(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "event": {
+                    "id": 190,
+                    "display_title": "Biennale",
+                    "start_date": "2026-05-01",
+                    "city": "Dakar",
+                    "country_code": "SN",
+                    "artistic_director": "Salimata Diop",
+                    "artists": [{"id": 3, "name": "Ousmane Sow"}, {"id": 3, "name": "Ousmane Sow"}],
+                    "series": {},
+                }
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    schema = _json_ld(get("/en/art-events/190", "vernissage.localhost:8000").text)
+    assert schema["performer"] == [{"@type": "Person", "name": "Ousmane Sow"}]
 
 
 def _exhibition_schema(monkeypatch, **fields) -> dict:
@@ -753,6 +780,25 @@ def test_vernissage_exhibition_with_unclear_fee_has_no_offers(monkeypatch, fee):
     assert "offers" not in schema
 
 
+def test_vernissage_exhibition_performers_prefer_linked_artists(monkeypatch):
+    schema = _exhibition_schema(monkeypatch, artists="이응노, 김창열", artist_links=[{"id": 1, "name": "이응노"}])
+    assert schema["performer"] == [{"@type": "Person", "name": "이응노"}]
+
+
+def test_vernissage_exhibition_performers_from_artist_text(monkeypatch):
+    schema = _exhibition_schema(monkeypatch, artists="조지아 오키프, 박연후(총 1인), 배운성 (), 폴 스트랜드 등")
+    assert [p["name"] for p in schema["performer"]] == ["조지아 오키프", "박연후", "배운성", "폴 스트랜드"]
+
+
+def test_vernissage_exhibition_performers_keep_names_around_notes_and_counts(monkeypatch):
+    """생몰년 괄호 안 쉼표로 이름이 갈리거나 '외 3인' 때문에 이름이 통째로 빠지지 않고, '전경린'처럼
+    '전시·전경'으로 시작하는 실제 이름도 남는다."""
+    schema = _exhibition_schema(
+        monkeypatch, artists="배운성 (1900, 서울), 김철수 외 3인, 전경린 및 전시우, 이응노(Lee Ungno)"
+    )
+    assert [p["name"] for p in schema["performer"]] == ["배운성", "김철수", "전경린", "전시우", "이응노"]
+
+
 def test_vernissage_docent_note_without_a_publish_date_has_no_null_fields(monkeypatch):
     async def upstream(request, url, headers):
         return httpx.Response(200, json={"note": {"title": "Undated story", "content": "Body"}})
@@ -763,6 +809,13 @@ def test_vernissage_docent_note_without_a_publish_date_has_no_null_fields(monkey
     assert schema["@type"] == "Article"
     assert schema["image"] == main._public_url("assets/hero-2.png")
     assert None not in schema.values()
+
+
+@pytest.mark.parametrize(
+    "artists", [None, "-", "개인(단체전)", "전시전경", "전시 전경", "9인", "국내․외 14명의 참여 작가", "성남큐브미술관"]
+)
+def test_vernissage_exhibition_without_real_artist_names_has_no_performer(monkeypatch, artists):
+    assert "performer" not in _exhibition_schema(monkeypatch, artists=artists)
 
 
 def test_vernissage_event_without_a_place_is_not_an_invalid_event(monkeypatch):
