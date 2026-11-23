@@ -565,6 +565,16 @@ def test_vernissage_docent_embeds_drop_surrounding_blank_lines():
     assert "</a>End." in rendered
 
 
+def test_vernissage_docent_cards_allow_spaces_between_references():
+    rendered = main._render_docent_content("Pollock.\n\n[[cards:artist:77, artwork:23854]]\n\nMore.")
+    assert "[[cards:" not in rendered
+    assert 'data-docent-card-kind="artist" data-docent-card-id="77" href="/artists/77"' in rendered
+    assert 'data-docent-card-kind="artwork" data-docent-card-id="23854" href="/artworks/23854"' in rendered
+    assert '<div class="docent-card-grid" data-count="2">' in rendered
+    # 유니코드 숫자 id는 public.js와 마찬가지로 카드로 바꾸지 않는다.
+    assert "[[cards:artist:٧٧]]" in main._render_docent_content("[[cards:artist:٧٧]]")
+
+
 def test_vernissage_docent_detail_renders_sources_adjacent_and_recommendations(monkeypatch):
     async def upstream(request, url, headers):
         return httpx.Response(

@@ -147,7 +147,7 @@
     .replace(/\*\*([^*\n](?:[^*\n]|\*(?!\*))*)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br />');
   const docentContent = (content = '') => {
-    const token = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\[cards:((?:(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event):[0-9]+)(?:,(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event):[0-9]+)*)\]\]|\[\[image:(https?:\/\/[^\]|]+)(?:\|([^\]]*))?\]\]/g;
+    const token = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|\[\[cards:\s*((?:(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event)\s*:\s*[0-9]+)(?:\s*,\s*(?:artwork|artist|art_concept|art_figure|museum|exhibition|art_event)\s*:\s*[0-9]+)*)\s*\]\]|\[\[image:(https?:\/\/[^\]|]+)(?:\|([^\]]*))?\]\]/g;
     let cursor = 0; let match; const parts = [];
     const text = String(content);
     const addText = value => {
@@ -162,7 +162,7 @@
         parts.push(`<figure class="docent-image"><img src="${escape(match[2])}" alt="${escape(match[1])}" loading="lazy" /></figure>`);
       } else if (match[3] !== undefined) {
         const cards = match[3].split(',').map(reference => {
-          const [kind, id] = reference.split(':');
+          const [kind, id] = reference.split(':').map(part => part.trim());
           return `<a class="docent-card" data-docent-card-kind="${kind}" data-docent-card-id="${id}" href="${BASE}/${CARD_PATHS[kind]}/${id}"><span class="docent-card-image" aria-hidden="true"></span><span class="docent-card-copy">${escape(T.cardLoading)}</span></a>`;
         });
         parts.push(cards.length > 1 ? `<div class="docent-card-grid" data-count="${cards.length}">${cards.join('')}</div>` : cards[0]);

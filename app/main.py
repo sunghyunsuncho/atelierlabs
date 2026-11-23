@@ -530,7 +530,10 @@ DOCENT_CARD_PATHS = {
 DOCENT_CARD_KINDS = "|".join(DOCENT_CARD_PATHS)
 DOCENT_EMBED = re.compile(
     r"!\[([^]]*)\]\((https?://[^\s)]+)\)|"
-    rf"\[\[cards:((?:(?:{DOCENT_CARD_KINDS}):\d+)(?:,(?:{DOCENT_CARD_KINDS}):\d+)*)\]\]|"
+    # 백엔드 파서(docent_content.py)처럼 쉼표·콜론 주변 공백을 허용한다 — admin에서
+    # "artist:77, artwork:23854"처럼 띄어 쓴 마커가 공개 페이지에서만 깨지지 않게.
+    # id는 [0-9]로 제한한다 — \d는 유니코드 숫자까지 받아 public.js([0-9])와 결과가 갈라진다.
+    rf"\[\[cards:\s*((?:(?:{DOCENT_CARD_KINDS})\s*:\s*[0-9]+)(?:\s*,\s*(?:{DOCENT_CARD_KINDS})\s*:\s*[0-9]+)*)\s*\]\]|"
     r"\[\[image:(https?://[^\]|]+)(?:\|([^]]*))?\]\]"
 )
 DOCENT_IMAGE_GROUP = re.compile(r'(?:<figure class="docent-image">(?:(?!</figure>).)*</figure>(?:<br />)*){2,}', re.S)
@@ -572,7 +575,7 @@ def _render_docent_content(content: object) -> str:
         elif cards:
             card_html: list[str] = []
             for reference in cards.split(","):
-                kind, item_id = reference.split(":", 1)
+                kind, item_id = (part.strip() for part in reference.split(":", 1))
                 path = DOCENT_CARD_PATHS[kind]
                 card_html.append(
                     f'<a class="docent-card" data-docent-card-kind="{kind}" data-docent-card-id="{item_id}" '
