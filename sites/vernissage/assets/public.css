@@ -138,7 +138,15 @@ body:has(> .public-main) > .public-main { flex: 1 0 auto; width: 100%; }
 /* 도슨트 글 하단 — 출처, 이전·다음 글, 추천 글(앱 상세와 같은 순서) */
 .docent-sources { margin: 48px 0 0; padding: 22px 0 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.75; }
 .docent-sources h2, .docent-recommended h2 { margin: 0 0 10px; color: var(--ink); font-size: 15px; font-weight: 750; letter-spacing: -.02em; }
-.docent-sources p { margin: 0; overflow-wrap: anywhere; }
+.docent-sources summary { display: flex; align-items: center; gap: 8px; width: fit-content; list-style: none; cursor: pointer; }
+.docent-sources summary::-webkit-details-marker { display: none; }
+.docent-sources summary h2 { margin: 0; }
+.docent-sources summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .18s ease; }
+.docent-sources[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.docent-sources summary:hover h2 { color: var(--coral); }
+.docent-sources summary:focus-visible { outline: 2px solid var(--coral); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { .docent-sources summary::after { transition: none; } }
+.docent-sources p { margin: 10px 0 0; overflow-wrap: anywhere; }
 .docent-sources a { color: var(--blue); }
 .docent-adjacent { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 40px 0 0; }
 .docent-adjacent-link { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); text-decoration: none; transition: border-color .18s ease, background .18s ease; }

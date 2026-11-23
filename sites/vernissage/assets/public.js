@@ -303,7 +303,7 @@
   const adjacentLink = (item, label, rel) => item ? `<a class="docent-adjacent-link ${rel}" rel="${rel}" href="${BASE}/docent/notes/${item.id}"><span class="label">${label}</span><span class="title">${escape(item.title)}</span></a>` : '';
   const docentExtras = data => {
     const note = data.note; const parts = [];
-    if (note.sources) parts.push(`<section class="docent-sources"><h2>${T.sources}</h2><p>${sourcesText(note.sources)}</p></section>`);
+    if (note.sources) parts.push(`<details class="docent-sources"><summary><h2>${T.sources}</h2></summary><p>${sourcesText(note.sources)}</p></details>`);
     if (data.previous || data.next) parts.push(`<nav class="docent-adjacent">${adjacentLink(data.previous, `← ${T.prevNote}`, 'prev')}${adjacentLink(data.next, `${T.nextNote} →`, 'next')}</nav>`);
     if (data.recommendations?.length) parts.push(`<section class="docent-recommended"><h2>${T.recommendedNotes}</h2><div class="grid">${data.recommendations.map(noteCard).join('')}</div></section>`);
     return parts.join('');

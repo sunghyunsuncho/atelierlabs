@@ -695,7 +695,7 @@ def _docent_footer_html(data: dict, language: str) -> str:
     sources = note.get("sources")
     if isinstance(sources, str) and sources.strip():
         parts.append(
-            f'<section class="docent-sources"><h2>{text["sources"]}</h2><p>{_render_docent_sources(sources)}</p></section>'
+            f'<details class="docent-sources"><summary><h2>{text["sources"]}</h2></summary><p>{_render_docent_sources(sources)}</p></details>'
         )
 
     def adjacent(key: str, label: str) -> str:

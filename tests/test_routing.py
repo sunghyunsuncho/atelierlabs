@@ -596,7 +596,7 @@ def test_vernissage_docent_detail_renders_sources_adjacent_and_recommendations(m
     monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
     monkeypatch.setattr(main, "_upstream_get", upstream)
     res = get("/en/docent/notes/35", "vernissage.localhost:8000")
-    assert '<section class="docent-sources"><h2>Sources</h2><p><strong>Museum archive</strong><br />' in res.text
+    assert '<details class="docent-sources"><summary><h2>Sources</h2></summary><p><strong>Museum archive</strong><br />' in res.text
     assert '<a href="https://example.org/a?b=1&amp;c=2" target="_blank" rel="noopener nofollow">' in res.text
     assert '</a>).</p>' in res.text
     assert 'rel="prev" href="/en/docent/notes/34"' in res.text
