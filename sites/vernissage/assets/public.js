@@ -28,7 +28,7 @@
       mapHintPins: '핀을 누르면 해당 미술관의 진행 중인 전시를 볼 수 있어요.',
       mapHintAll: '나라를 고르면 그 나라 미술관의 위치를 핀으로 볼 수 있어요.',
       mapHintNone: '이 나라에는 아직 지도에 표시할 미술관 위치가 없어요.',
-      backNotes: '← 도슨트 목록', notesTitle: '도슨트', notesIntro: '작품과 장소에 얽힌 이야기를 천천히 읽어보세요.', noNotes: '표시할 도슨트 글이 없습니다.', cardLoading: '작품 정보를 불러오는 중이에요.', cardUntitled: '제목 없는 작품', cardUnavailable: '작품 보기',
+      backNotes: '← 도슨트 목록', notesTitle: '도슨트', notesIntro: '작품과 장소에 얽힌 이야기를 천천히 읽어보세요.', noNotes: '표시할 도슨트 글이 없습니다.', cardLoading: '작품 정보를 불러오는 중이에요.', cardUntitled: '제목 없는 작품', cardUnavailable: '작품 보기', sources: '출처', prevNote: '이전 글', nextNote: '다음 글', recommendedNotes: '추천하는 다음 도슨트 글',
       backEvents: '← 비엔날레 · 아트페어 목록', eventNoDesc: '행사 상세 정보는 준비 중입니다.', eventSite: '행사 공식 홈페이지 ↗',
       tabCalendar: '연간 캘린더', tabList: '진행 중 · 예정',
       eventsTitle: '비엔날레 · 아트페어', eventsIntro: '세계 곳곳에서 열리는 예술 행사를 살펴보세요.',
@@ -62,7 +62,7 @@
       mapHintPins: 'Tap a pin to see what’s on at that museum.',
       mapHintAll: 'Pick a country to see its museums pinned on the map.',
       mapHintNone: 'We don’t have museum locations to show for this country yet.',
-      backNotes: '← All docent stories', notesTitle: 'Docent', notesIntro: 'Slow down and enjoy the stories behind the art and the places it lives.', noNotes: 'No docent stories to show yet.', cardLoading: 'Loading artwork…', cardUntitled: 'Untitled artwork', cardUnavailable: 'View artwork',
+      backNotes: '← All docent stories', notesTitle: 'Docent', notesIntro: 'Slow down and enjoy the stories behind the art and the places it lives.', noNotes: 'No docent stories to show yet.', cardLoading: 'Loading artwork…', cardUntitled: 'Untitled artwork', cardUnavailable: 'View artwork', sources: 'Sources', prevNote: 'Previous', nextNote: 'Next', recommendedNotes: 'Recommended next stories',
       backEvents: '← All biennials & art fairs', eventNoDesc: 'More details about this event are coming soon.', eventSite: 'Official event website ↗',
       tabCalendar: 'Yearly calendar', tabList: 'On now & upcoming',
       eventsTitle: 'Biennials & Art Fairs', eventsIntro: 'See what’s happening in the art world, wherever it’s happening.',
@@ -97,7 +97,7 @@
       mapHintPins: 'ピンをタップすると、その美術館で開催中の展覧会を見られます。',
       mapHintAll: '国を選ぶと、その国の美術館の場所がピンで表示されます。',
       mapHintNone: 'この国には、まだ地図に表示できる美術館がありません。',
-      backNotes: '← ドーセント一覧', notesTitle: 'ドーセント', notesIntro: '作品や場所にまつわる物語を、ゆっくり味わってみてください。', noNotes: '表示できるドーセント記事はありません。', cardLoading: '作品情報を読み込んでいます。', cardUntitled: '無題の作品', cardUnavailable: '作品を見る',
+      backNotes: '← ドーセント一覧', notesTitle: 'ドーセント', notesIntro: '作品や場所にまつわる物語を、ゆっくり味わってみてください。', noNotes: '表示できるドーセント記事はありません。', cardLoading: '作品情報を読み込んでいます。', cardUntitled: '無題の作品', cardUnavailable: '作品を見る', sources: '出典', prevNote: '前の記事', nextNote: '次の記事', recommendedNotes: '次に読みたいドーセント記事',
       backEvents: '← ビエンナーレ・アートフェア一覧', eventNoDesc: 'このイベントの詳しい情報は準備中です。', eventSite: 'イベントの公式サイト ↗',
       tabCalendar: '年間カレンダー', tabList: '開催中・開催予定',
       eventsTitle: 'ビエンナーレ・アートフェア', eventsIntro: '世界各地で開かれるアートイベントをチェックしましょう。',
@@ -291,7 +291,21 @@
   }
   const fail = () => { app.innerHTML = `<p class="error">${T.loadFailed}</p>`; };
   const exhibitionCard = item => `<a class="card" href="${BASE}/exhibitions/${item.id}">${item.image_url ? `<img class="thumb" src="${escape(item.image_url)}" alt="" />` : '<span class="thumb"></span>'}<div class="body"><p class="meta">${escape(item.museum?.name || item.place_name || '')} · ${date(item.start_date)} — ${date(item.end_date)}</p><h2>${escape(item.title)}</h2></div></a>`;
-  const noteCard = item => `<a class="card" href="${BASE}/docent/notes/${item.id}">${item.thumbnail_url ? `<img class="thumb" src="${escape(item.thumbnail_url)}" alt="" />` : '<span class="thumb"></span>'}<div class="body"><p class="meta">${escape(item.entity_label || '')} · ${date(item.published_at)}</p><h2>${escape(item.title)}</h2><p>${escape(item.excerpt || '')}</p></div></a>`;
+  const noteCard = item => `<a class="card" href="${BASE}/docent/notes/${item.id}">${item.thumbnail_url ? `<img class="thumb" src="${escape(item.thumbnail_url)}" alt="" />` : '<span class="thumb"></span>'}<div class="body"><p class="meta">${escape(item.entity_label || '')} · ${date(item.published_at)}</p><h2>${escape(item.title || item.entity_label || '')}</h2><p>${escape(item.excerpt || '')}</p></div></a>`;
+  // 도슨트 글 하단 — 앱 상세와 같은 순서로 출처, 이전·다음 글, 추천 글을 붙인다.
+  // 출처는 줄바꿈이 있는 평문에 **굵게**와 URL만 섞여 있어 그 둘만 HTML로 바꾼다.
+  const sourcesText = value => docentText(value).replace(/https?:\/\/[^\s<]+/g, raw => {
+    const url = raw.replace(/(?:&#39;|&quot;|[)\].,;:!?’”])+$/, '');
+    return `<a href="${url}" target="_blank" rel="noopener nofollow">${url}</a>${raw.slice(url.length)}`;
+  });
+  const adjacentLink = (item, label, rel) => item ? `<a class="docent-adjacent-link ${rel}" rel="${rel}" href="${BASE}/docent/notes/${item.id}"><span class="label">${label}</span><span class="title">${escape(item.title)}</span></a>` : '';
+  const docentExtras = data => {
+    const note = data.note; const parts = [];
+    if (note.sources) parts.push(`<section class="docent-sources"><h2>${T.sources}</h2><p>${sourcesText(note.sources)}</p></section>`);
+    if (data.previous || data.next) parts.push(`<nav class="docent-adjacent">${adjacentLink(data.previous, `← ${T.prevNote}`, 'prev')}${adjacentLink(data.next, `${T.nextNote} →`, 'next')}</nav>`);
+    if (data.recommendations?.length) parts.push(`<section class="docent-recommended"><h2>${T.recommendedNotes}</h2><div class="grid">${data.recommendations.map(noteCard).join('')}</div></section>`);
+    return parts.join('');
+  };
   // 국가 코드 → 국기 이모지(지역 표시 문자 두 개)
   const flag = code => String.fromCodePoint(...[...code].map(c => 0x1F1A5 + c.charCodeAt(0)));
   const eventFlag = item => item.country_code ? `<span class="flag" aria-hidden="true">${flag(item.country_code)}</span> ` : '';
@@ -360,7 +374,7 @@
     if (id) {
       const data = await get(`docent/notes/${id}`); const note = data.note;
       document.title = `${note.title} | Vernissage`;
-      app.innerHTML = `<article class="detail"><a class="back" href="${BASE}/docent/notes">${T.backNotes}</a><h1>${escape(note.title)}</h1><p class="meta">${date(note.published_at)}</p>${note.thumbnail_url ? `<img class="detail-image" src="${escape(note.thumbnail_url)}" alt="" />` : ''}<div class="detail-text docent-content">${docentContent(note.content || note.excerpt || '')}</div></article>`;
+      app.innerHTML = `<article class="detail"><a class="back" href="${BASE}/docent/notes">${T.backNotes}</a><h1>${escape(note.title)}</h1><p class="meta">${date(note.published_at)}</p>${note.thumbnail_url ? `<img class="detail-image" src="${escape(note.thumbnail_url)}" alt="" />` : ''}<div class="detail-text docent-content">${docentContent(note.content || note.excerpt || '')}</div>${docentExtras(data)}</article>`;
       hydrateDocentCards(app);
       return;
     }

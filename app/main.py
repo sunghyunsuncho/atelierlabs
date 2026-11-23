@@ -656,6 +656,65 @@ def _render_vernissage_detail_shell(
     )
 
 
+DOCENT_FOOTER_TEXT = {
+    "ko": {"sources": "출처", "prev": "이전 글", "next": "다음 글", "recommended": "추천하는 다음 도슨트 글"},
+    "en": {"sources": "Sources", "prev": "Previous", "next": "Next", "recommended": "Recommended next stories"},
+    "ja": {"sources": "出典", "prev": "前の記事", "next": "次の記事", "recommended": "次に読みたいドーセント記事"},
+}
+# 이스케이프·굵게 처리를 마친 HTML에서 URL을 찾는다 — 끝에 붙은 문장부호(이스케이프된 따옴표 포함)는 링크에서 뺀다.
+DOCENT_SOURCE_URL = re.compile(r"https?://[^\s<]+")
+DOCENT_SOURCE_URL_TRAILING = re.compile(r"(?:&#x27;|&quot;|[)\].,;:!?’”])+$")
+
+
+def _docent_source_link(match: re.Match[str]) -> str:
+    raw = match.group()
+    url = DOCENT_SOURCE_URL_TRAILING.sub("", raw)
+    return f'<a href="{url}" target="_blank" rel="noopener nofollow">{url}</a>{raw[len(url):]}'
+
+
+def _render_docent_sources(text: str) -> str:
+    """출처 평문 — 앱(RichText)·public.js sourcesText와 같이 **굵게**와 URL만 HTML로 바꾼다."""
+    return DOCENT_SOURCE_URL.sub(_docent_source_link, _render_docent_text(text))
+
+
+def _docent_footer_html(data: dict, language: str) -> str:
+    """도슨트 글 하단 — public.js docentExtras와 같은 마크업(출처, 이전·다음 글, 추천 글)."""
+    text = DOCENT_FOOTER_TEXT.get(language, DOCENT_FOOTER_TEXT["ko"])
+    prefix = f"/{language}" if language in LANGS else ""
+    note = data.get("note") if isinstance(data.get("note"), dict) else {}
+    parts: list[str] = []
+    sources = note.get("sources")
+    if isinstance(sources, str) and sources.strip():
+        parts.append(
+            f'<section class="docent-sources"><h2>{text["sources"]}</h2><p>{_render_docent_sources(sources)}</p></section>'
+        )
+
+    def adjacent(key: str, label: str) -> str:
+        item = data.get(key)
+        if not isinstance(item, dict) or not str(item.get("id") or "").isdigit():
+            return ""
+        rel = "prev" if key == "previous" else "next"
+        return (
+            f'<a class="docent-adjacent-link {rel}" rel="{rel}" href="{prefix}/docent/notes/{item["id"]}">'
+            f'<span class="label">{label}</span><span class="title">{html.escape(str(item.get("title") or ""))}</span></a>'
+        )
+
+    links = adjacent("previous", f"← {text['prev']}") + adjacent("next", f"{text['next']} →")
+    if links:
+        parts.append(f'<nav class="docent-adjacent">{links}</nav>')
+    cards = [
+        card[2]
+        for item in (data.get("recommendations") or [])
+        if isinstance(item, dict)
+        and (card := _listing_card("docent/notes", {**item, "title": item.get("title") or item.get("entity_label")}, prefix))
+    ]
+    if cards:
+        parts.append(
+            f'<section class="docent-recommended"><h2>{text["recommended"]}</h2><div class="grid">{"".join(cards)}</div></section>'
+        )
+    return "".join(parts)
+
+
 async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str) -> Response | None:
     match = VERNISSAGE_SEO_DETAIL.fullmatch(url_path)
     if not match:
@@ -724,6 +783,7 @@ async def _vernissage_seo_detail(request: Request, site_dir: Path, url_path: str
             f"<h1>{html.escape(title)}</h1>",
             image_html,
             f'<div class="detail-text{(" docent-content" if section == "docent/notes" else "")}">{content_html}</div>',
+            _docent_footer_html(data, language) if section == "docent/notes" else "",
             "</article>",
         )
     )

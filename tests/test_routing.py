@@ -556,6 +556,37 @@ def test_vernissage_docent_embeds_render_images_and_artwork_cards(monkeypatch):
     assert "[[cards:artwork:2649,artist:40]]" not in res.text
 
 
+def test_vernissage_docent_detail_renders_sources_adjacent_and_recommendations(monkeypatch):
+    async def upstream(request, url, headers):
+        return httpx.Response(
+            200,
+            json={
+                "note": {
+                    "title": "Footer story",
+                    "content": "Body.",
+                    "sources": "**Museum archive**\nhttps://example.org/a?b=1&c=2).",
+                },
+                "previous": {"id": 34, "title": "Older <story>"},
+                "next": None,
+                "recommendations": [
+                    {"id": 12, "title": None, "entity_label": "Water Lilies", "excerpt": "Pond.", "published_at": "2026-10-01T00:00:00Z"},
+                ],
+            },
+        )
+
+    monkeypatch.setattr(main, "VERNISSAGE_API_BASE_URL", "http://vernissage-api:8000")
+    monkeypatch.setattr(main, "_upstream_get", upstream)
+    res = get("/en/docent/notes/35", "vernissage.localhost:8000")
+    assert '<section class="docent-sources"><h2>Sources</h2><p><strong>Museum archive</strong><br />' in res.text
+    assert '<a href="https://example.org/a?b=1&amp;c=2" target="_blank" rel="noopener nofollow">' in res.text
+    assert '</a>).</p>' in res.text
+    assert 'rel="prev" href="/en/docent/notes/34"' in res.text
+    assert "Older &lt;story&gt;" in res.text
+    assert 'rel="next"' not in res.text
+    assert '<h2>Recommended next stories</h2>' in res.text
+    assert 'href="/en/docent/notes/12"' in res.text and "Water Lilies" in res.text
+
+
 def test_vernissage_docent_card_grid_preserves_exact_card_count():
     content = "[[cards:artist:1,artist:2,artist:3,artist:4]]"
     rendered = main._render_docent_content(content)
