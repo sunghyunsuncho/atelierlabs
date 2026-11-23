@@ -556,6 +556,15 @@ def test_vernissage_docent_embeds_render_images_and_artwork_cards(monkeypatch):
     assert "[[cards:artwork:2649,artist:40]]" not in res.text
 
 
+def test_vernissage_docent_embeds_drop_surrounding_blank_lines():
+    rendered = main._render_docent_content(
+        "Intro.\n\n![A](https://i/a.jpg)\n\nNext.\nTwo\n\n[[cards:artwork:1]]\n\nEnd."
+    )
+    assert 'Intro.<figure class="docent-image">' in rendered
+    assert "</figure>Next.<br />Two<a class=\"docent-card\"" in rendered
+    assert "</a>End." in rendered
+
+
 def test_vernissage_docent_detail_renders_sources_adjacent_and_recommendations(monkeypatch):
     async def upstream(request, url, headers):
         return httpx.Response(

@@ -22,15 +22,15 @@ body:has(> .public-main) > .public-main { flex: 1 0 auto; width: 100%; }
 .detail-text { white-space: pre-wrap; font-size: 17px; line-height: 1.9; }
 .docent-content { white-space: normal; }
 .docent-content strong { color: var(--ink); font-weight: 760; }
-.docent-image { max-width: 580px; margin: 28px auto; }
+.docent-image { max-width: 580px; margin: 20px auto; }
 .docent-image img { display: block; width: 100%; max-height: 680px; object-fit: contain; background: var(--surface); border-radius: 12px; }
 .docent-image figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.55; }
-.docent-image-grid, .docent-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 28px 0; }
+.docent-image-grid, .docent-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
 /* 2장과 4장은 여백이 생기지 않도록 2열, 3·5·6장은 3열로 배치한다. */
 .docent-image-grid[data-count="2"], .docent-card-grid[data-count="2"], .docent-image-grid[data-count="4"], .docent-card-grid[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .docent-image-grid .docent-image { width: 100%; max-width: none; margin: 0; }
 .docent-image-grid .docent-image img { aspect-ratio: 1; max-height: none; }
-.docent-card { display: block; max-width: 580px; margin: 28px auto; overflow: hidden; border: 1px solid rgba(21, 21, 21, .12); border-radius: 14px; background: var(--paper); box-shadow: 0 4px 18px rgba(21, 21, 21, .06); color: var(--ink); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.docent-card { display: block; max-width: 580px; margin: 20px auto; overflow: hidden; border: 1px solid rgba(21, 21, 21, .12); border-radius: 14px; background: var(--paper); box-shadow: 0 4px 18px rgba(21, 21, 21, .06); color: var(--ink); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
 .docent-card-grid .docent-card { width: 100%; margin: 0; }
 .docent-card:hover { transform: translateY(-3px); border-color: rgba(21, 21, 21, .32); box-shadow: 0 12px 26px rgba(21, 21, 21, .12); color: var(--ink); }
 .docent-card-image { display: block; width: 100%; aspect-ratio: 4 / 3; min-height: 260px; background: #e9e7e2; overflow: hidden; }

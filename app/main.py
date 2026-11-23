@@ -535,6 +535,8 @@ DOCENT_EMBED = re.compile(
 )
 DOCENT_IMAGE_GROUP = re.compile(r'(?:<figure class="docent-image">(?:(?!</figure>).)*</figure>(?:<br />)*){2,}', re.S)
 DOCENT_IMAGE = re.compile(r'<figure class="docent-image">(?:(?!</figure>).)*</figure>', re.S)
+DOCENT_LEADING_BREAKS = re.compile(r"^(?:[ \t]*\n)+[ \t]*")
+DOCENT_TRAILING_BREAKS = re.compile(r"[ \t]*(?:\n[ \t]*)+$")
 DOCENT_BOLD = re.compile(r"\*\*([^*\n](?:[^*\n]|\*(?!\*))*)\*\*")
 
 
@@ -556,7 +558,11 @@ def _render_docent_content(content: object) -> str:
     rendered: list[str] = []
     cursor = 0
     for match in DOCENT_EMBED.finditer(text):
-        rendered.append(_render_docent_text(text[cursor : match.start()]))
+        # 이미지·카드는 블록이라 앞뒤 빈 줄(<br />)이 여백만 키운다 — 붙어 있는 줄바꿈은 지운다.
+        segment = text[cursor : match.start()]
+        if cursor:
+            segment = DOCENT_LEADING_BREAKS.sub("", segment)
+        rendered.append(_render_docent_text(DOCENT_TRAILING_BREAKS.sub("", segment)))
         alt, image_url, cards, embedded_image_url, caption = match.groups()
         if image_url:
             rendered.append(
@@ -586,7 +592,7 @@ def _render_docent_content(content: object) -> str:
                 f"{f'<figcaption>{html.escape(caption)}</figcaption>' if caption else ''}</figure>"
             )
         cursor = match.end()
-    rendered.append(_render_docent_text(text[cursor:]))
+    rendered.append(_render_docent_text(DOCENT_LEADING_BREAKS.sub("", text[cursor:]) if cursor else text))
 
     def group_images(match: re.Match[str]) -> str:
         images = DOCENT_IMAGE.findall(match.group())

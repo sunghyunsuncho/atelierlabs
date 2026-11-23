@@ -154,8 +154,10 @@
       if (!value) return;
       parts.push(docentText(value));
     };
+    // 이미지·카드는 블록이라 앞뒤 빈 줄(<br />)이 여백만 키운다 — 붙어 있는 줄바꿈은 지운다.
+    const trimLeading = value => cursor ? value.replace(/^(?:[ \t]*\n)+[ \t]*/, '') : value;
     while ((match = token.exec(text))) {
-      addText(text.slice(cursor, match.index));
+      addText(trimLeading(text.slice(cursor, match.index)).replace(/[ \t]*(?:\n[ \t]*)+$/, ''));
       if (match[1] !== undefined) {
         parts.push(`<figure class="docent-image"><img src="${escape(match[2])}" alt="${escape(match[1])}" loading="lazy" /></figure>`);
       } else if (match[3] !== undefined) {
@@ -170,7 +172,7 @@
       }
       cursor = token.lastIndex;
     }
-    addText(text.slice(cursor));
+    addText(trimLeading(text.slice(cursor)));
     // 줄바꿈만 사이에 둔 이미지들은 하나의 사진 묶음으로 보고 2~3열로 배치한다.
     return parts.join('').replace(/(?:<figure class="docent-image">(?:(?!<\/figure>)[\s\S])*<\/figure>(?:<br \/>)*){2,}/g, group => {
       const images = group.match(/<figure class="docent-image">(?:(?!<\/figure>)[\s\S])*<\/figure>/g) || [];
