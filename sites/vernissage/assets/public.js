@@ -210,17 +210,20 @@
   };
   // 작품 데이터는 수집처에 따라 대표 이미지가 여러 필드·배열 안에 들어올 수 있다.
   // 카드가 비어 보이지 않도록 URL 후보를 한 곳에서 정규화한다.
+  // 카드는 작은 칸이라 썸네일을 먼저 쓴다(앱과 같은 기준). image_url은 위키미디어 원본이라
+  // 수백 MB짜리도 있다 — 비너스의 탄생(작품 13792) 원본은 221MB라 브라우저가 그리지 못했다.
   const imageUrl = value => {
     if (typeof value === 'string') return /^https?:\/\//i.test(value) ? value : '';
     if (Array.isArray(value)) return value.map(imageUrl).find(Boolean) || '';
     if (!value || typeof value !== 'object') return '';
-    return imageUrl(value.url || value.src || value.image_url || value.thumbnail_url || value.original_url || value.medium_url || value.large_url || value.file_url || value.source_url);
+    // || 체인은 첫 truthy 값에서 멈추므로, 썸네일이 상대 경로처럼 쓸 수 없는 값이면 다음 후보로 넘어가지 못한다.
+    return imageUrl([value.thumbnail_url, value.url, value.src, value.image_url, value.medium_url, value.original_url, value.large_url, value.file_url, value.source_url]);
   };
   const artworkImage = item => {
     if (!item || typeof item !== 'object') return '';
     const candidates = [
-      item.image_url, item.thumbnail_url, item.image, item.thumbnail, item.cover_image, item.primary_image,
-      item.cover_url, item.photo_url, item.primary_image_url, item.imageUrl, item.thumbnailUrl,
+      item.thumbnail_url, item.image_url, item.thumbnail, item.image, item.cover_image, item.primary_image,
+      item.cover_url, item.photo_url, item.primary_image_url, item.thumbnailUrl, item.imageUrl,
       item.image_urls, item.images, item.photos, item.attachments,
     ];
     return candidates.map(imageUrl).find(Boolean) || '';
